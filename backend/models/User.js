@@ -20,7 +20,14 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String,
       required: false,
-    }
+    },
+    picture: { type: String, required: false },
+    googleCalendar:{
+      accessToken: String,
+      refreshToken: String,
+      calendarId: String,
+      tokenExpiryDate: Date,
+    },
   },
   { timestamps: true }
 );

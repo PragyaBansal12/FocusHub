@@ -43,3 +43,36 @@ export async function login(req, res) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 }
+export const getMe = async (req, res) => {
+    try {
+        // Find the user using the ID provided by authMiddleware
+        // .select('-password') prevents sending the hashed password to the client
+        const user = await User.findById(req.user.id).select('-password');
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Return the user data to the frontend
+        res.status(200).json({ 
+            id: user._id, 
+            username: user.username, 
+            email: user.email,
+        });
+
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        res.status(500).json({ message: "Server error during session check" });
+    }
+};
+
+export async function getAllStudents(req, res) {
+  try {
+    // We only fetch name, email, and picture for safety
+    // We do NOT fetch passwords
+    const students = await User.find({}, "name email picture");
+    res.status(200).json(students);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching students", error: err.message });
+  }
+}

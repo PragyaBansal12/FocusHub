@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+
 const taskSchema = new mongoose.Schema(
 {
     user:{
@@ -42,10 +43,20 @@ const taskSchema = new mongoose.Schema(
     pomodoroSessions:{
         type:Number,
         default:0,
+    },
+
+    googleEventId:{
+        type:String,
+        default:null,
+    },
+    sendOverdueAlert:{
+        type:Boolean,
+        default: false,
     }
 },
 {
     timestamps:true
 }
 );
+
 export default mongoose.model("Task",taskSchema);

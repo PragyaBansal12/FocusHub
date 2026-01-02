@@ -21,11 +21,15 @@ const materialSchema = new mongoose.Schema(
     // File information
     fileName: {
       type: String,
-      required: true
+      required: false,
+    },
+    filePath:{
+      type:String,
+      required:false,
     },
     originalName: {
       type: String,
-      required: true
+      required: true,
     },
     fileType: {
       type: String, // 'pdf', 'image', 'video', 'document'
@@ -39,9 +43,16 @@ const materialSchema = new mongoose.Schema(
       type: Number, // Size in bytes
       required: true
     },
-    filePath: {
-      type: String,
-      required: true
+    //cloudinary fields
+    fileUrl:{
+      type:String,
+      required:true,
+      unique:true,
+    },
+    publicId:{
+      type:String,
+      required:true,
+      unique:true,
     },
     // Organization
     tags: [{

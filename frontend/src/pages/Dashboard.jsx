@@ -1,31 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import PomodoroTimer from "../components/PomodoroTimer";
 import { CheckSquare, BookOpen, MessageSquare, TrendingUp, ArrowRight } from "lucide-react";
 
+// 🔥 NEW IMPORT: Get the Task Context
+import { useTasks } from "../context/TaskContext"; 
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  // 🔥 REMOVED: local state for todayTasks and the second fetch
+  // 🔥 REMOVED: const [todayTasks, setTodayTasks] = useState([]);
+
   const [pomodoroStats, setPomodoroStats] = useState({
     totalSessions: 0,
     totalMinutes: 0,
     weekSessions: 0
   });
-  const [todayTasks, setTodayTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 🔥 NEW: Consume Task Context
+  const { tasks, getTasksDueToday, loading: tasksLoading } = useTasks();
+
+  // DERIVED STATE: Filter tasks locally using the context's full task list
+  const todayTasks = tasks.filter(task => {
+    if (!task.dueDate || task.completed) return false;
+    const today = new Date().toDateString();
+    return new Date(task.dueDate).toDateString() === today;
+  });
+
   // ============================================
-  // FETCH DASHBOARD DATA
+  // FETCH DASHBOARD DATA (Only Pomodoro Stats)
   // ============================================
   
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  async function fetchDashboardData() {
+  // Use useCallback to ensure fetchDashboardData has a stable identity
+  const fetchDashboardData = useCallback(async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
       
-      // Fetch pomodoro stats
+      // Fetch pomodoro stats (This remains local as it's Dashboard specific)
       const statsRes = await fetch("http://localhost:5000/api/pomodoro/stats", {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -33,30 +46,25 @@ export default function Dashboard() {
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setPomodoroStats(statsData);
+      } else {
+         console.error("Failed to fetch pomodoro stats");
       }
 
-      // Fetch today's tasks
-      const tasksRes = await fetch("http://localhost:5000/api/tasks", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (tasksRes.ok) {
-        const tasksData = await tasksRes.json();
-        // Filter for today's tasks (tasks with today's due date)
-        const today = new Date().toDateString();
-        const tasksToday = tasksData.tasks.filter(task => {
-          if (!task.dueDate) return false;
-          return new Date(task.dueDate).toDateString() === today;
-        });
-        setTodayTasks(tasksToday);
-      }
+      // 🔥 REMOVED: Logic to fetch and filter today's tasks is now handled by TaskContext
 
       setLoading(false);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       setLoading(false);
     }
-  }
+  }, []); // Empty dependency array as it only fetches stats (not task dependent)
+
+  
+  // Initial fetch for Pomodoro Stats
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
 
   // ============================================
   // HANDLE POMODORO SESSION COMPLETION
@@ -64,7 +72,6 @@ export default function Dashboard() {
   
   /**
    * Called when a pomodoro session completes
-   * Saves session to backend and updates task statistics
    */
   async function handleSessionComplete(sessionData) {
     console.log("🍅 Pomodoro session completed:", sessionData);
@@ -86,11 +93,9 @@ export default function Dashboard() {
         const result = await res.json();
         console.log("✅ Session saved to database:", result);
         
-        // ✅ Refresh dashboard stats
+        // ✅ Refresh dashboard stats after successful save
         fetchDashboardData();
         
-        // ✅ Show success notification (optional)
-        // You could add a toast notification here
       } else {
         const error = await res.json();
         console.error("❌ Failed to save session:", error);
@@ -101,10 +106,11 @@ export default function Dashboard() {
   }
 
   // ============================================
-  // QUICK LINKS CONFIGURATION
+  // QUICK LINKS CONFIGURATION (No change)
   // ============================================
   
   const quickLinks = [
+    // ... (quickLinks configuration remains the same) ...
     {
       title: "Manage Tasks",
       description: "Create and track your study tasks",
@@ -135,8 +141,11 @@ export default function Dashboard() {
     }
   ];
 
+  // Combine loading states for a better UX
+  const dashboardLoading = loading || tasksLoading;
+
   // ============================================
-  // RENDER
+  // RENDER (Updates to use todayTasks derived from Context)
   // ============================================
 
   return (
@@ -151,7 +160,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Quick Links Grid */}
+        {/* Quick Links Grid (No change) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {quickLinks.map((link) => {
             const Icon = link.icon;
@@ -176,7 +185,7 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Today's Tasks Preview */}
+        {/* Today's Tasks Preview - USES Context Data */}
         <div className="rounded-2xl p-6 bg-white dark:bg-[#121318] shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold">Today's Tasks</h3>
@@ -188,7 +197,7 @@ export default function Dashboard() {
             </button>
           </div>
           
-          {loading ? (
+          {dashboardLoading ? ( // Use combined loading state
             <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
           ) : todayTasks.length === 0 ? (
             <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -237,33 +246,35 @@ export default function Dashboard() {
 
       {/* Sidebar */}
       <aside className="space-y-6">
-        {/* ✅ Pomodoro Timer with Session Saving */}
+        {/* Pomodoro Timer with Session Saving */}
         <PomodoroTimer onSessionComplete={handleSessionComplete} />
         
-        {/* ✅ Updated Quick Stats with Real Data */}
+        {/* Quick Stats - USES Context Data for Tasks */}
         <div className="rounded-2xl p-4 bg-white dark:bg-[#121318] shadow-md">
           <h4 className="font-semibold mb-3">Quick Stats</h4>
           <div className="space-y-3">
+            {/* 🔥 NOW USES todayTasks DERIVED FROM CONTEXT */}
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">Tasks Today</span>
-              <span className="font-semibold">{todayTasks.length}</span>
+              <span className="font-semibold">{todayTasks.length}</span> 
             </div>
+            {/* The rest of the stats remain the same, using local pomodoroStats */}
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">Focus Time</span>
               <span className="font-semibold">
-                {loading ? '...' : `${Math.floor(pomodoroStats.totalMinutes / 60)}h ${pomodoroStats.totalMinutes % 60}m`}
+                {dashboardLoading ? '...' : `${Math.floor(pomodoroStats.totalMinutes / 60)}h ${pomodoroStats.totalMinutes % 60}m`}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">This Week</span>
               <span className="font-semibold">
-                {loading ? '...' : `🍅 ${pomodoroStats.weekSessions} sessions`}
+                {dashboardLoading ? '...' : `🍅 ${pomodoroStats.weekSessions} sessions`}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">Total Sessions</span>
               <span className="font-semibold">
-                {loading ? '...' : `${pomodoroStats.totalSessions}`}
+                {dashboardLoading ? '...' : `${pomodoroStats.totalSessions}`}
               </span>
             </div>
           </div>
