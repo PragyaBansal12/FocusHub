@@ -1,312 +1,176 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { useAuth } from './AuthContext'; 
 
 const ForumContext = createContext(null);
 
 export const useForum = () => {
-  const context = useContext(ForumContext);
-  if (!context) {
-    throw new Error('useForum must be used within ForumProvider');
-  }
-  return context;
+    const context = useContext(ForumContext);
+    if (!context) throw new Error('useForum must be used within ForumProvider');
+    return context;
 };
 
 export function ForumProvider({ children }) {
-  // ============================================
-  // STATE (ALL ORIGINAL LOGIC PRESERVED)
-  // ============================================
-  const [posts, setPosts] = useState([]);
-  const [currentPost, setCurrentPost] = useState(null);
-  const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [trendingTags, setTrendingTags] = useState([]);
-  const [hasMore, setHasMore] = useState(true);
-  
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTag, setSelectedTag] = useState('');
-  const [sortBy, setSortBy] = useState('recent');
+    const { user } = useAuth(); 
+    const [posts, setPosts] = useState([]);
+    const [comments, setComments] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [students, setStudents] = useState([]);
+    const [onlineUsers, setOnlineUsers] = useState(new Set());
+    
+    // 🔥 FIX 1: Change from [] to {} to separate chats by User ID
+    // Format: { "studentId_1": [msg, msg], "studentId_2": [msg] }
+    const [privateMessages, setPrivateMessages] = useState({}); 
+    const [selectedStudent, setSelectedStudent] = useState(null); 
+    const [unreadCounts, setUnreadCounts] = useState({});
+    
+    const socketRef = useRef(null);
+    const isConnected = useRef(false);
 
-  // Community & DM Features
-  const [students, setStudents] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState(new Set());
-  const [privateMessages, setPrivateMessages] = useState([]); 
-  const [selectedStudent, setSelectedStudent] = useState(null); 
-  
-  // Socket.IO
-  const socketRef = useRef(null);
-  const isConnected = useRef(false);
+    const getMyId = useCallback(() => user?.id || user?._id, [user]);
 
-  // ============================================
-  // API FUNCTIONS FOR STUDENTS & DMs (UNCHANGED)
-  // ============================================
-  const fetchStudents = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/auth/students', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setStudents(data);
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error);
-    }
-  }, []);
+    // Reset unread count when a student is selected
+    useEffect(() => {
+        if (selectedStudent?._id) {
+            setUnreadCounts(prev => ({ ...prev, [selectedStudent._id]: 0 }));
+        }
+    }, [selectedStudent]);
 
-  const fetchChatHistory = useCallback(async (otherUserId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/messages/history/${otherUserId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) setPrivateMessages(data);
-    } catch (error) {
-      console.error('Error fetching chat history:', error);
-    }
-  }, []);
+    const fetchStudents = useCallback(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:5000/api/auth/students', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                const myId = getMyId();
+                setStudents(data.filter(s => s._id !== myId));
+            }
+        } catch (error) { console.error('Error fetching students:', error); }
+    }, [getMyId]);
 
-  // ============================================
-  // SOCKET.IO CONNECTION & LISTENERS (UNCHANGED)
-  // ============================================
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    const fetchChatHistory = useCallback(async (otherUserId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`http://localhost:5000/api/messages/history/${otherUserId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                // 🔥 FIX 2: Store history under the specific user's ID key
+                setPrivateMessages(prev => ({
+                    ...prev,
+                    [otherUserId]: data
+                }));
+            }
+        } catch (error) { console.error('Error fetching chat history:', error); }
+    }, []);
 
-    if (!socketRef.current) {
-      socketRef.current = io('http://localhost:5000', { auth: { token } });
-    }
-    const socket = socketRef.current;
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token || !user) {
+            if (socketRef.current) socketRef.current.disconnect();
+            return;
+        }
 
-    socket.on('connect', () => { 
-      console.log('✅ Socket connected:', socket.id);
-      isConnected.current = true; 
-    });
-    socket.on('disconnect', () => { 
-      console.log('❌ Socket disconnected');
-      isConnected.current = false; 
-    });
+        socketRef.current = io('http://localhost:5000', { auth: { token } });
+        const socket = socketRef.current;
 
-    socket.on('newPost', (post) => {
-      setPosts(prev => [post, ...prev]);
-    });
+        socket.on('connect', () => { isConnected.current = true; });
 
-    socket.on('postVoteUpdate', ({ postId, upvotes, downvotes }) => {
-      setPosts(prev => prev.map(post => 
-        post._id === postId 
-          ? { ...post, upvoteCount: upvotes, downvoteCount: downvotes, voteScore: upvotes - downvotes }
-          : post
-      ));
-      setCurrentPost(prev => (prev?._id === postId 
-        ? { ...prev, upvoteCount: upvotes, downvoteCount: downvotes, voteScore: upvotes - downvotes }
-        : prev
-      ));
-    });
+        // --- 1. PRIVATE MESSAGES (Isolated Conversations) ---
+        socket.on('receivePrivateMessage', (message) => {
+            const myId = String(getMyId());
+            const senderId = String(message.sender?._id || message.sender);
+            const recipientId = String(message.recipient?._id || message.recipient);
 
-    socket.on('postDeleted', (postId) => {
-      setPosts(prev => prev.filter(post => post._id !== postId));
-    });
+            // 🔥 FIX 3: Identify which student this message belongs to
+            const partnerId = senderId === myId ? recipientId : senderId;
 
-    socket.on('postUpdated', (updatedPost) => {
-      setPosts(prev => prev.map(post => post._id === updatedPost._id ? updatedPost : post));
-    });
+            setPrivateMessages(prev => {
+                const currentChat = prev[partnerId] || [];
+                if (currentChat.find(m => m._id === message._id)) return prev;
+                return {
+                    ...prev,
+                    [partnerId]: [...currentChat, message]
+                };
+            });
+        });
 
-    socket.on('newComment', (comment) => {
-      setComments(prev => [...prev, comment]);
-    });
+        socket.on('newMessageNotification', ({ senderId }) => {
+            if (String(selectedStudent?._id) !== String(senderId)) {
+                setUnreadCounts(prev => ({ ...prev, [senderId]: (prev[senderId] || 0) + 1 }));
+            }
+        });
 
-    socket.on('commentVoteUpdate', ({ commentId, upvotes, downvotes }) => {
-      setComments(prev => prev.map(comment =>
-        comment._id === commentId
-          ? { ...comment, upvoteCount: upvotes, downvoteCount: downvotes, voteScore: upvotes - downvotes }
-          : comment
-      ));
-    });
+        // --- 2. ONLINE STATUS & FORUM ---
+        socket.on('userStatusUpdate', ({ userId, status }) => {
+            if (userId === getMyId()) return;
+            setOnlineUsers(prev => {
+                const next = new Set(prev);
+                status === 'online' ? next.add(userId) : next.delete(userId);
+                return next;
+            });
+        });
 
-    socket.on('commentDeleted', (commentId) => {
-      setComments(prev => prev.filter(comment => comment._id !== commentId));
-    });
+        socket.on('initialOnlineUsers', (userIds) => {
+            setOnlineUsers(new Set(userIds.filter(id => id !== getMyId())));
+        });
 
-    socket.on('commentAdded', ({ postId, commentCount }) => {
-      setPosts(prev => prev.map(post => post._id === postId ? { ...post, commentCount } : post));
-    });
+        socket.on('newPost', (post) => setPosts(prev => [post, ...prev]));
+        socket.on('newComment', (comment) => setComments(prev => [...prev, comment]));
 
-    socket.on('userStatusUpdate', ({ userId, status }) => {
-      setOnlineUsers(prev => {
-        const next = new Set(prev);
-        status === 'online' ? next.add(userId) : next.delete(userId);
-        return next;
-      });
-    });
+        return () => socket.disconnect();
+    }, [user, getMyId, selectedStudent]);
 
-    socket.on('initialOnlineUsers', (userIds) => {
-      setOnlineUsers(new Set(userIds));
-    });
+    const sendPrivateMessage = useCallback((recipientId, text) => {
+        return new Promise((resolve, reject) => {
+            if (!socketRef.current) return reject(new Error('Socket disconnected'));
+            socketRef.current.emit('sendPrivateMessage', { recipientId, text }, (res) => {
+                if (res.success) {
+                    // Update local bucket immediately for the recipient
+                    setPrivateMessages(prev => ({
+                        ...prev,
+                        [recipientId]: [...(prev[recipientId] || []), res.message]
+                    }));
+                    resolve(res.message);
+                } else reject(new Error(res.error));
+            });
+        });
+    }, []);
 
-    socket.on('receivePrivateMessage', (message) => {
-      setPrivateMessages((prev) => {
-        const exists = prev.find(m => m._id === message._id);
-        if (exists) return prev;
-        return [...prev, message];
-      });
-    });
+    const fetchPosts = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await fetch(`http://localhost:5000/api/forum/posts`);
+            const data = await res.json();
+            if (res.ok) setComments(data.comments || []);
+        } catch (error) { console.error('Error:', error); }
+        finally { setLoading(false); }
+    }, []);
 
-    return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('newPost');
-      socket.off('postVoteUpdate');
-      socket.off('postDeleted');
-      socket.off('postUpdated');
-      socket.off('newComment');
-      socket.off('commentVoteUpdate');
-      socket.off('commentDeleted');
-      socket.off('commentAdded');
-      socket.off('userStatusUpdate');
-      socket.off('initialOnlineUsers');
-      socket.off('receivePrivateMessage');
-      socket.disconnect();
-      socketRef.current = null;
+    const addComment = useCallback((postId, content) => {
+        return new Promise((resolve, reject) => {
+            if (!socketRef.current) return;
+            socketRef.current.emit('addComment', { postId, content }, (res) => {
+                if (res.success) resolve(res.comment);
+                else reject(new Error(res.error));
+            });
+        });
+    }, []);
+
+    useEffect(() => {
+        fetchPosts();
+        fetchStudents(); 
+    }, [fetchPosts, fetchStudents, user]);
+
+    const value = {
+        posts, comments, loading, students, onlineUsers, 
+        privateMessages, // Now an Object grouped by user
+        selectedStudent, setSelectedStudent, unreadCounts, 
+        fetchChatHistory, sendPrivateMessage, addComment
     };
-  }, []);
 
-  // ============================================
-  // UPDATED: AUTO-LOAD COMMUNITY DISCUSSION
-  // ============================================
-  const fetchPosts = useCallback(async () => {
-    try {
-      setLoading(true);
-      // Fetches the single main discussion from the backend
-      const res = await fetch(`http://localhost:5000/api/forum/posts`);
-      const data = await res.json();
-      if (res.ok) {
-        // We set currentPost so the UI knows we are in the main room
-        setCurrentPost(data.post);
-        setComments(data.comments);
-        // Automatically join the socket room for this post
-        if (socketRef.current && data.post?._id) {
-          socketRef.current.emit('joinPost', data.post._id);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching forum:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchPost = useCallback(async (postId) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/forum/posts/${postId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setCurrentPost(data.post);
-        setComments(data.comments);
-        setSelectedStudent(null); 
-        if (socketRef.current) {
-          socketRef.current.emit('joinPost', postId);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching post:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchTrendingTags = useCallback(async () => {
-    try {
-      const res = await fetch('http://localhost:5000/api/forum/tags/trending');
-      const data = await res.json();
-      if (res.ok) setTrendingTags(data.tags);
-    } catch (error) {
-      console.error('Error fetching trending tags:', error);
-    }
-  }, []);
-
-  // ============================================
-  // SOCKET ACTIONS (UNCHANGED)
-  // ============================================
-  const sendPrivateMessage = useCallback((recipientId, text) => {
-    return new Promise((resolve, reject) => {
-      if (!socketRef.current) return reject(new Error('Socket disconnected'));
-      socketRef.current.emit('sendPrivateMessage', { recipientId, text }, (res) => {
-        if (res.success) {
-          setPrivateMessages(prev => [...prev, res.message]);
-          resolve(res.message);
-        } else reject(new Error(res.error));
-      });
-    });
-  }, []);
-
-  const upvotePost = useCallback((postId) => {
-    return new Promise((resolve, reject) => {
-      if (!socketRef.current) return;
-      socketRef.current.emit('upvotePost', postId, (res) => res.success ? resolve(res) : reject(new Error(res.error)));
-    });
-  }, []);
-
-  const downvotePost = useCallback((postId) => {
-    return new Promise((resolve, reject) => {
-      if (!socketRef.current) return;
-      socketRef.current.emit('downvotePost', postId, (res) => res.success ? resolve(res) : reject(new Error(res.error)));
-    });
-  }, []);
-
-  const addComment = useCallback((postId, content, parentCommentId = null) => {
-    return new Promise((resolve, reject) => {
-      if (!socketRef.current) return;
-      socketRef.current.emit('addComment', { postId, content, parentCommentId }, (res) => {
-        if (res.success) resolve(res.comment);
-        else reject(new Error(res.error));
-      });
-    });
-  }, []);
-
-  const upvoteComment = useCallback((commentId) => {
-    return new Promise((resolve, reject) => {
-      if (!socketRef.current) return;
-      socketRef.current.emit('upvoteComment', commentId, (res) => res.success ? resolve(res) : reject(new Error(res.error)));
-    });
-  }, []);
-
-  const deleteComment = useCallback((commentId) => {
-    return new Promise((resolve, reject) => {
-      if (!socketRef.current) return;
-      socketRef.current.emit('deleteComment', commentId, (res) => res.success ? resolve() : reject(new Error(res.error)));
-    });
-  }, []);
-
-  const leavePost = useCallback((postId) => {
-    if (socketRef.current) socketRef.current.emit('leavePost', postId);
-  }, []);
-
-  // ============================================
-  // INITIAL LOAD
-  // ============================================
-  useEffect(() => {
-    fetchPosts(); // Load Community Chat
-    fetchTrendingTags();
-    fetchStudents(); // Load DM list & Online Status
-  }, [fetchPosts, fetchTrendingTags, fetchStudents]);
-
-  // ============================================
-  // CONTEXT VALUE (ALL ORIGINAL VALUES EXPORTED)
-  // ============================================
-  const value = {
-    posts, currentPost, comments, loading, trendingTags, hasMore, 
-    students, onlineUsers, privateMessages, selectedStudent,
-    setSelectedStudent, fetchChatHistory, sendPrivateMessage,
-    searchQuery, setSearchQuery, selectedTag, setSelectedTag, sortBy, setSortBy,
-    fetchPosts, fetchPost, upvotePost, downvotePost, addComment, 
-    upvoteComment, deleteComment, leavePost, isConnected: isConnected.current
-  };
-
-  return <ForumContext.Provider value={value}>{children}</ForumContext.Provider>;
+    return <ForumContext.Provider value={value}>{children}</ForumContext.Provider>;
 }

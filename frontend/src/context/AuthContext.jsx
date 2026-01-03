@@ -12,43 +12,68 @@ export default function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Function to check the session status using the secure cookie
+    // Function to check the session status
     const checkUserSession = async () => {
+        setLoading(true);
         try {
-            // This call triggers the authMiddleware on the backend.
+            const token = localStorage.getItem('token');
+            if (token) {
+                axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+            } else {
+                // If no token, ensure axios header is cleared
+                delete axios.defaults.headers.common["Authorization"];
+            }
+
             const response = await axios.get(`${API_BASE_URL}/me`); 
-
-            // If 200 OK, the cookie is valid.
             setUser(response.data); 
-
         } catch (error) {
-            // If 401 Unauthorized, the cookie is invalid or missing.
             setUser(null);
+            localStorage.removeItem('token');
+            delete axios.defaults.headers.common["Authorization"];
         } finally {
-            // 🔥 CRITICAL: Set loading to false only after the API call finishes.
             setLoading(false);
         }
     };
 
+    // 1. Initial Load Check
     useEffect(() => {
-        // Run the session check only once on component mount
         checkUserSession();
     }, []);
 
+    // 2. 🔥 CROSS-TAB SYNC LOGIC
+    // This listens for changes in localStorage from OTHER tabs
+    useEffect(() => {
+        const syncTabs = (event) => {
+            if (event.key === 'token') {
+                console.log("Session change detected in another tab. Syncing...");
+                checkUserSession();
+            }
+        };
+
+        window.addEventListener('storage', syncTabs);
+        return () => window.removeEventListener('storage', syncTabs);
+    }, []);
+
     const login = (userData) => {
-        // Frontend state updated on successful login/signup, token is in the cookie.
-        setUser(userData); 
+        const token = userData.token;
+        if (token) {
+            localStorage.setItem('token', token);
+            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        }
+        setUser(userData.user || userData); 
     };
 
     const logout = async () => {
-        // Remove the user state and trigger backend to clear the cookie
         try {
-            // Assuming you implement a /logout route to clear the cookie
             await axios.post(`${API_BASE_URL}/logout`); 
         } catch (error) {
             console.error("Error logging out:", error);
+        } finally {
+            // Always clear local state even if server call fails
+            setUser(null);
+            localStorage.removeItem('token');
+            delete axios.defaults.headers.common["Authorization"];
         }
-        setUser(null);
     };
 
     return (

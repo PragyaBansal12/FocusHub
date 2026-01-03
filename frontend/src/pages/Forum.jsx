@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useForum } from '../context/ForumContext';
 import { useAuth } from '../context/AuthContext';
 import ChatMessage from '../components/forum/ChatMessage';
-import { Send, Users, MessageSquare } from 'lucide-react';
+import { Send, Users } from 'lucide-react';
 
 export default function Forum() {
   const { 
@@ -14,18 +14,22 @@ export default function Forum() {
     selectedStudent, 
     setSelectedStudent, 
     fetchChatHistory, 
-    privateMessages, 
-    sendPrivateMessage 
+    privateMessages, // This is now an object { userId: [messages] }
+    sendPrivateMessage,
+    unreadCounts 
   } = useForum();
   
   const { user } = useAuth(); 
   const [msgInput, setMsgInput] = useState("");
   const scrollRef = useRef(null);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages or switching chats
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
     }
   }, [comments, privateMessages, selectedStudent]);
 
@@ -35,11 +39,13 @@ export default function Forum() {
 
     try {
       if (selectedStudent) {
-        // Send DM
+        // Send Private Message
         await sendPrivateMessage(selectedStudent._id, msgInput);
-      } else if (currentPost) {
-        // Send to Community Discussion
-        await addComment(currentPost._id, msgInput);
+      } else {
+        // Send to Community (assuming currentPost is the global thread)
+        // If currentPost is null, you might need a default ID or handle differently
+        const postId = currentPost?._id || "global"; 
+        await addComment(postId, msgInput);
       }
       setMsgInput("");
     } catch (err) {
@@ -50,14 +56,14 @@ export default function Forum() {
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 dark:bg-[#0b0f15] overflow-hidden">
       
-      {/* 1. SIDEBAR - Restored Full Direct Message Logic */}
+      {/* 1. SIDEBAR */}
       <div className="w-72 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-[#121318]">
         <div className="p-4 border-b border-gray-200 dark:border-gray-800 font-bold text-lg text-gray-800 dark:text-white">
           Forum
         </div>
         
         <div className="flex-1 overflow-y-auto pt-2">
-          {/* Main Community Room Button */}
+          {/* Community Room Button */}
           <div 
             onClick={() => setSelectedStudent(null)}
             className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer mx-2 rounded-lg transition-all mb-4 ${
@@ -74,15 +80,15 @@ export default function Forum() {
             Direct Messages
           </div>
           
-          {/* List of Students with Online Indicators */}
-          {students && students.filter(s => s._id !== (user?.id || user?._id)).map(student => (
+          {/* List of Students */}
+          {students && students.map(student => (
             <div 
               key={student._id}
               onClick={() => { 
                 setSelectedStudent(student); 
                 fetchChatHistory(student._id); 
               }}
-              className={`flex items-center gap-3 px-4 py-2 cursor-pointer mx-2 rounded-lg transition-all mb-1 ${
+              className={`flex items-center gap-3 px-4 py-2 cursor-pointer mx-2 rounded-lg transition-all mb-1 group ${
                 selectedStudent?._id === student._id 
                   ? 'bg-blue-600 text-white shadow-lg' 
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
@@ -90,16 +96,24 @@ export default function Forum() {
             >
               <div className="relative">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase ${
-                  selectedStudent?._id === student._id ? 'bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'
+                  selectedStudent?._id === student._id ? 'bg-blue-400 text-white' : 'bg-gray-200 dark:bg-gray-700'
                 }`}>
                   {student.name.charAt(0)}
                 </div>
-                {/* Online Green Dot */}
+                {/* Online Indicator */}
                 {onlineUsers.has(student._id) && (
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-[#121318] rounded-full"></div>
                 )}
               </div>
-              <span className="text-sm font-medium truncate">{student.name}</span>
+              
+              <span className="text-sm font-medium truncate flex-1">{student.name}</span>
+
+              {/* Unread Notification Badge */}
+              {unreadCounts[student._id] > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                  {unreadCounts[student._id]}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -122,9 +136,11 @@ export default function Forum() {
         {/* Chat Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-2 bg-[#f0f2f5] dark:bg-[#0b0f15]">
           {selectedStudent ? (
-            // Private Messages View
-            privateMessages.map((msg, idx) => {
-              const isMe = (msg.sender?._id || msg.sender) === (user?.id || user?._id);
+            // 🔥 PRIVATE MESSAGES VIEW
+            (privateMessages[selectedStudent._id] || []).map((msg, idx) => {
+              const myId = user?.id || user?._id;
+              const senderId = msg.sender?._id || msg.sender;
+              const isMe = String(senderId) === String(myId);
               return (
                 <div key={msg._id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
@@ -138,12 +154,12 @@ export default function Forum() {
               );
             })
           ) : (
-            // Community Discussion View (Uses your ChatMessage component)
+            // 🔥 COMMUNITY VIEW
             comments.map(c => (
               <ChatMessage 
                 key={c._id} 
                 comment={c} 
-                isMe={c.user?._id === (user?.id || user?._id)} 
+                isMe={String(c.user?._id || c.user) === String(user?.id || user?._id)} 
               />
             ))
           )}

@@ -3,6 +3,7 @@ import { ThumbsUp } from 'lucide-react';
 
 export default function ChatMessage({ comment, isMe }) {
   return (
+    
     <div className={`flex w-full mb-4 ${isMe ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-[80%] gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
         

@@ -1,26 +1,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import axios from "axios"; // 🔥 Use axios instead of fetch
+
 export default function Login() {
   const navigate = useNavigate();
-  const {login} = useAuth();
+  const { login } = useAuth();
   const [data, setData] = useState({ email: "", password: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const res = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      // 🔥 Use axios withCredentials so the cookie is stored properly
+      const res = await axios.post("http://localhost:5000/api/auth/login", data, {
+        withCredentials: true 
+      });
 
-    const result = await res.json();
-    if (res.ok) {
-      login(result.token);
-      navigate("/"); // redirect to dashboard
-    } else {
-      alert(result.message);
+      if (res.status === 200) {
+        // Result.data is what axios returns
+        login(res.data); 
+        navigate("/dashboard"); 
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Login failed");
     }
   };
 
