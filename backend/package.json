@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.21.0",
     "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.11",
     "react-hot-toast": "^2.6.0",

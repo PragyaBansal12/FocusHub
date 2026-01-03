@@ -18,6 +18,7 @@ import analyticsRoutes from "./routes/AnalyticsRoutes.js";
 import forumRoutes from "./routes/forumRoutes.js";
 import calendarRoutes from "./routes/calendarRoutes.js"
 import messageRoutes from "./routes/messageRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 
 import { setupSocketHandlers } from "./socket/socketHandler.js"
@@ -79,6 +80,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/forum", forumRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/message",messageRoutes);
+app.use("/api/user",userRoutes);
 
 
 const PORT = process.env.PORT || 5000;

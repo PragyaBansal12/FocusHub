@@ -14,7 +14,7 @@ export default function Forum() {
     selectedStudent, 
     setSelectedStudent, 
     fetchChatHistory, 
-    privateMessages, // This is now an object { userId: [messages] }
+    privateMessages, 
     sendPrivateMessage,
     unreadCounts 
   } = useForum();
@@ -23,7 +23,11 @@ export default function Forum() {
   const [msgInput, setMsgInput] = useState("");
   const scrollRef = useRef(null);
 
-  // Auto-scroll to bottom on new messages or switching chats
+  // Helper to get fallback avatar
+  const getAvatar = (person) => {
+    return person?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(person?.name || "U")}&background=random&color=fff`;
+  };
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
@@ -39,11 +43,8 @@ export default function Forum() {
 
     try {
       if (selectedStudent) {
-        // Send Private Message
         await sendPrivateMessage(selectedStudent._id, msgInput);
       } else {
-        // Send to Community (assuming currentPost is the global thread)
-        // If currentPost is null, you might need a default ID or handle differently
         const postId = currentPost?._id || "global"; 
         await addComment(postId, msgInput);
       }
@@ -95,11 +96,13 @@ export default function Forum() {
               }`}
             >
               <div className="relative">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase ${
-                  selectedStudent?._id === student._id ? 'bg-blue-400 text-white' : 'bg-gray-200 dark:bg-gray-700'
-                }`}>
-                  {student.name.charAt(0)}
-                </div>
+                {/* 🔥 FIX: Added Image logic to Sidebar */}
+                <img 
+                  src={getAvatar(student)} 
+                  alt="" 
+                  className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                />
+                
                 {/* Online Indicator */}
                 {onlineUsers.has(student._id) && (
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-[#121318] rounded-full"></div>
@@ -122,31 +125,50 @@ export default function Forum() {
       {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 bg-white dark:bg-[#121318] border-b border-gray-200 dark:border-gray-800 shadow-sm">
-          <h3 className="font-bold text-lg text-gray-800 dark:text-white">
-            {selectedStudent ? selectedStudent.name : "Community Discussion"}
-          </h3>
-          <p className="text-xs text-gray-500">
-            {selectedStudent 
-              ? (onlineUsers.has(selectedStudent._id) ? 'Online' : 'Offline') 
-              : 'Public Channel'}
-          </p>
+        <div className="px-6 py-4 bg-white dark:bg-[#121318] border-b border-gray-200 dark:border-gray-800 shadow-sm flex items-center gap-3">
+          {selectedStudent && (
+             <img 
+               src={getAvatar(selectedStudent)} 
+               alt="" 
+               className="w-10 h-10 rounded-full object-cover"
+             />
+          )}
+          <div>
+            <h3 className="font-bold text-lg text-gray-800 dark:text-white">
+              {selectedStudent ? selectedStudent.name : "Community Discussion"}
+            </h3>
+            <p className="text-xs text-gray-500">
+              {selectedStudent 
+                ? (onlineUsers.has(selectedStudent._id) ? 'Online' : 'Offline') 
+                : 'Public Channel'}
+            </p>
+          </div>
         </div>
 
         {/* Chat Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-2 bg-[#f0f2f5] dark:bg-[#0b0f15]">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f0f2f5] dark:bg-[#0b0f15]">
           {selectedStudent ? (
             // 🔥 PRIVATE MESSAGES VIEW
             (privateMessages[selectedStudent._id] || []).map((msg, idx) => {
               const myId = user?.id || user?._id;
               const senderId = msg.sender?._id || msg.sender;
               const isMe = String(senderId) === String(myId);
+              
               return (
-                <div key={msg._id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg._id || idx} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {/* 🔥 Photo in Private Messages */}
+                  {!isMe && (
+                    <img 
+                      src={getAvatar(selectedStudent)} 
+                      alt="" 
+                      className="w-6 h-6 rounded-full object-cover mb-1" 
+                    />
+                  )}
+                  
                   <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
                     isMe 
-                      ? 'bg-blue-600 text-white rounded-tr-none' 
-                      : 'bg-white dark:bg-[#1c1f26] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-tl-none'
+                      ? 'bg-blue-600 text-white rounded-br-none' 
+                      : 'bg-white dark:bg-[#1c1f26] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-bl-none'
                   }`}>
                     {msg.text}
                   </div>
@@ -154,7 +176,7 @@ export default function Forum() {
               );
             })
           ) : (
-            // 🔥 COMMUNITY VIEW
+            // 🔥 COMMUNITY VIEW (Uses ChatMessage component)
             comments.map(c => (
               <ChatMessage 
                 key={c._id} 

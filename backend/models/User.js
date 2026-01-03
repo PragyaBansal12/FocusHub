@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    picture: { type: String, required: false },
+    profilePicture: { type: String, required: false },
     googleCalendar:{
       accessToken: String,
       refreshToken: String,

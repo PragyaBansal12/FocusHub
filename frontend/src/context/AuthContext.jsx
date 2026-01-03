@@ -62,6 +62,12 @@ export default function AuthProvider({ children }) {
         }
         setUser(userData.user || userData); 
     };
+    const updateUser = (updatedData) => {
+        setUser((prevUser) => ({
+            ...prevUser,
+            ...updatedData,
+        }));
+    };
 
     const logout = async () => {
         try {
@@ -77,7 +83,7 @@ export default function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, isLoggedIn: !!user, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, isLoggedIn: !!user, login, logout ,updateUser}}>
             {children}
         </AuthContext.Provider>
     );
