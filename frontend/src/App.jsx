@@ -1,7 +1,7 @@
 // src/App.jsx - FINAL CORRECTED VERSION
 
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate ,useLocation} from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import Materials from './pages/Materials';
@@ -13,6 +13,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
 import { DashboardProvider } from './context/DashboardContext';
 import { MaterialsProvider } from './context/MaterialsContext'; 
 import { AnalyticsProvider } from './context/AnalyticsContext';
@@ -22,6 +23,15 @@ import axios from 'axios';
 
 // Set axios to send cookies with all requests
 axios.defaults.withCredentials = true;
+
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return null; // Wait for session check
+  if (user) return <Navigate to="/dashboard" replace />;
+  
+  return children;
+};
 
 export default function App() {
  

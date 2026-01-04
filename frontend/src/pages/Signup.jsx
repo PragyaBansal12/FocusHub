@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { GoogleLogin } from '@react-oauth/google'; // 🔥 Added this
+import axios from "axios"; // 🔥 Added this
 
 export default function Signup() {
   const navigate = useNavigate();
-  const {login} = useAuth();
+  const { login } = useAuth();
   const [data, setData] = useState({ name: "", email: "", password: "" });
 
+  // Existing manual signup logic (using fetch as per your code)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -18,10 +21,29 @@ export default function Signup() {
 
     const result = await res.json();
     if (res.ok) {
-      login(result.token);
+      login(result); // Pass the whole result if your context needs user + token
       navigate("/");
     } else {
       alert(result.message);
+    }
+  };
+
+  // 🔥 NEW: Google Signup Success Handler
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/google-login", {
+        token: credentialResponse.credential
+      }, {
+        withCredentials: true
+      });
+
+      if (res.status === 200 || res.status === 201) {
+        login(res.data);
+        navigate("/"); 
+      }
+    } catch (err) {
+      console.error("Google Signup Error:", err);
+      alert(err.response?.data?.message || "Google Signup failed");
     }
   };
 
@@ -56,6 +78,17 @@ export default function Signup() {
             Sign Up
           </button>
         </form>
+
+        {/* 🔥 Google Signup Button */}
+        <div className="mt-6 flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => alert("Google Signup Failed")}
+            text="signup_with" // Makes the button say "Sign up with Google"
+            shape="pill"
+            theme="filled_blue"
+          />
+        </div>
 
         <p className="text-sm text-white/70 text-center mt-4">
           Already have an account?{" "}

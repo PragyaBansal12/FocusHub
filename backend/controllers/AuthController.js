@@ -1,9 +1,73 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from 'google-auth-library'; // 🔥 Added this
+
+// Initialize Google Client
+const client = new OAuth2Client(process.env.GOOGLE_LOGIN_CLIENT_ID);
 
 // Helper to provide a default avatar if none exists
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?background=random&color=fff&name=";
+
+// 🔥 NEW: Google Login Controller
+// 🔥 NEW: Google Login Controller (With Cookie Support for Consistency)
+export async function googleLogin(req, res) {
+  const { token } = req.body;
+
+  try {
+    // 1. Verify the Google Token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_LOGIN_CLIENT_ID,
+    });
+    
+    const { name, email, picture, sub } = ticket.getPayload();
+
+    // 2. Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // 3. Create new user if they don't exist
+      user = await User.create({
+        name,
+        email,
+        profilePicture: picture,
+        googleId: sub,
+      });
+    }
+
+    // 4. Generate your app's JWT
+    const appToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    // 5. 🔥 CRITICAL FIX: Set the HTTP-only cookie for authMiddleware
+    res.cookie("token", appToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // Secure in production
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // 6. Respond with the user object and token
+    res.json({ 
+      message: "Google login successful", 
+      token: appToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profilePicture: user.profilePicture || (DEFAULT_AVATAR + user.name)
+      }
+    });
+    
+  } catch (error) {
+    console.error("Google Verification Error:", error);
+    res.status(400).json({ message: "Google verification failed", error: error.message });
+  }
+}
+
+// --- YOUR EXISTING LOGIC (UNTOUCHED) ---
 
 export async function signup(req, res) {
   try {
@@ -41,7 +105,6 @@ export async function login(req, res) {
       expiresIn: "7d",
     });
 
-    // We send the user object with the token so frontend can use it immediately
     res.json({ 
       message: "Login successful", 
       token,
@@ -67,9 +130,8 @@ export const getMe = async (req, res) => {
 
     res.status(200).json({ 
       id: user._id, 
-      name: user.name, // Changed from username to name to match your Schema
+      name: user.name, 
       email: user.email,
-      // 🔥 FIX: Return profilePicture or a default one
       profilePicture: user.profilePicture || (DEFAULT_AVATAR + user.name)
     });
 
@@ -81,10 +143,8 @@ export const getMe = async (req, res) => {
 
 export async function getAllStudents(req, res) {
   try {
-    // 🔥 FIX: Changed 'picture' to 'profilePicture' to match your Schema
     const students = await User.find({}, "name email profilePicture");
     
-    // Map through students to add default avatars where missing
     const studentsWithAvatars = students.map(s => ({
       ...s._doc,
       profilePicture: s.profilePicture || (DEFAULT_AVATAR + s.name)

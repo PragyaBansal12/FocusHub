@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import axios from "axios"; // 🔥 Use axios instead of fetch
+import axios from "axios"; 
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -27,6 +28,24 @@ export default function Login() {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/google-login", {
+        token: credentialResponse.credential
+      }, {
+        withCredentials: true
+      });
+
+      if (res.status === 200) {
+        login(res.data);
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error("Google Login Error:", err);
+      alert("Google Login failed. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[url('/bg.jpg')] bg-cover bg-center">
       <div className="backdrop-blur-lg bg-white/10 p-8 rounded-2xl border border-white/20 w-[90%] max-w-md shadow-xl">
@@ -36,7 +55,7 @@ export default function Login() {
           <input
             type="email"
             placeholder="Email"
-            className="w-full p-3 rounded-lg bg-white/20 text-white outline-none"
+            className="w-full p-3 rounded-lg bg-white/20 text-black outline-none"
             onChange={(e) => setData({ ...data, email: e.target.value })}
           />
 
@@ -51,6 +70,17 @@ export default function Login() {
             Login
           </button>
         </form>
+
+        {/* 🔥 Google Login Button Container */}
+        <div className="mt-6 flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => alert("Google Login Failed")}
+            useOneTap
+            theme="filled_blue"
+            shape="pill"
+          />
+        </div>
 
         <p className="text-sm text-white/70 text-center mt-4">
           Don't have an account?{" "}

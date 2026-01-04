@@ -1,7 +1,7 @@
 // routes/authRoutes.js - FINAL CORRECTED VERSION
 
 import express from "express";
-import { login, signup, getMe ,getAllStudents} from "../controllers/AuthController.js" // 🔥 FIX: Import getMe
+import { login, signup, getMe ,getAllStudents,googleLogin} from "../controllers/AuthController.js" // 🔥 FIX: Import getMe
 import { authMiddleware } from "../middleware/authMiddleware.js"; // 🔥 FIX: Import authMiddleware
 
 const router = express.Router();
@@ -9,6 +9,7 @@ const router = express.Router();
 // Public routes
 router.post("/signup", signup);
 router.post("/login", login);
+router.post("/google-login",googleLogin);
 
 // =============================================
 // 🔥 CRITICAL FIX: Session Check Endpoint
