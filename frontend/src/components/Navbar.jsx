@@ -21,13 +21,20 @@ export default function Navbar() {
   const location = useLocation();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  // 🔥 SAFETY CHECK: Do not render Navbar on Login or Signup pages
+  const authPaths = ["/login", "/signup"];
+  if (authPaths.includes(location.pathname)) {
+    return null;
+  }
+
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  // 🔥 PATHS UPDATED: Ensured dashboard is explicitly /dashboard
   const navItems = [
-    { path: "/", label: "Dashboard", icon: LayoutDashboard },
+    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/tasks", label: "Tasks", icon: CheckSquare },
     { path: "/materials", label: "Materials", icon: BookOpen },
     { path: "/forum", label: "Forum", icon: MessageSquare },
@@ -42,12 +49,13 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <div 
               className="text-xl font-semibold text-accent cursor-pointer"
-              onClick={() => navigate(user ? "/" : "/home")}
+              onClick={() => navigate(user ? "/dashboard" : "/home")}
             >
               FocusHub+
             </div>
           </div>
 
+          {/* Navigation Links - Only visible if user is logged in */}
           {user && (
             <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
@@ -72,6 +80,7 @@ export default function Navbar() {
           )}
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Theme Toggle */}
             <button
               onClick={toggle}
               className="p-2 rounded-md bg-gray-100 dark:bg-[#111318] hover:scale-105 transition-transform"
@@ -82,7 +91,7 @@ export default function Navbar() {
             {user && (
               <div className="flex items-center gap-3 border-l dark:border-gray-800 pl-3">
                 
-                {/* 🔥 SIGNUP NAME DISPLAYED AT THE SIDE OF PROFILE ICON */}
+                {/* Profile Section */}
                 <button 
                   onClick={() => setIsProfileModalOpen(true)}
                   className="flex items-center gap-3 px-2 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-all group"
@@ -97,6 +106,7 @@ export default function Navbar() {
                   </span>
                 </button>
 
+                {/* Logout Button */}
                 <button
                   onClick={handleLogout}
                   className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"

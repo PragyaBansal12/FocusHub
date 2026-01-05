@@ -44,6 +44,12 @@ app.use(cors({
     credentials: true, // 🔥 FIX: MUST be true to accept and send cookies/JWT
 }));
 
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  next();
+});
+
 // 2. Middleware setup
 app.use(express.json()); // Parses incoming JSON requests
 app.use(cookieParser()); // Parses cookies attached to requests

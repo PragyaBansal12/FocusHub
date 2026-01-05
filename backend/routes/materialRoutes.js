@@ -7,15 +7,15 @@ import{
     deleteMaterial,
     getStorageStats
 }from "../controllers/MaterialController.js"
-import { authMiddleware} from "../middleware/authMiddleware.js";
+import { authMiddleware as protect} from "../middleware/authMiddleware.js";
 import upload from "../config/multerConfig.js";
 const router = express.Router();
 
 //all routes require authentication
-router.use(authMiddleware);
+router.use(protect);
 
 //upload materials with file handling
-router.post("/",upload.single('file'),uploadMaterial);
+router.post("/",protect,upload.single('file'),uploadMaterial);
 
 //get all materials with optional filters
 router.get("/",getMaterials);
