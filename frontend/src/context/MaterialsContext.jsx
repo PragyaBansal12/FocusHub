@@ -17,7 +17,6 @@ export function MaterialsProvider({ children }) {
   // ============================================
   // STATE
   // ============================================
-  
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -33,6 +32,8 @@ export function MaterialsProvider({ children }) {
   const [filterType, setFilterType] = useState(''); // 'pdf', 'image', 'video', 'document'
   const [filterTag, setFilterTag] = useState('');
 
+  const API_BASE_URL = 'http://localhost:5000/api';
+
   // ============================================
   // API FUNCTIONS
   // ============================================
@@ -45,13 +46,12 @@ export function MaterialsProvider({ children }) {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Build query params
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       if (filterType) params.append('type', filterType);
       if (filterTag) params.append('tag', filterTag);
       
-      const url = `http://localhost:5000/api/materials?${params.toString()}`;
+      const url = `${API_BASE_URL}/materials?${params.toString()}`;
       
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
@@ -77,12 +77,11 @@ export function MaterialsProvider({ children }) {
   const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/materials/stats', {
+      const res = await fetch(`${API_BASE_URL}/materials/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       const data = await res.json();
-      
       if (res.ok) {
         setStats(data);
       }
@@ -99,7 +98,6 @@ export function MaterialsProvider({ children }) {
       setUploading(true);
       const token = localStorage.getItem('token');
       
-      // Create FormData (required for file uploads)
       const formData = new FormData();
       formData.append('file', file);
       formData.append('title', metadata.title || file.name);
@@ -107,11 +105,11 @@ export function MaterialsProvider({ children }) {
       formData.append('subject', metadata.subject || '');
       formData.append('tags', JSON.stringify(metadata.tags || []));
       
-      const res = await fetch('http://localhost:5000/api/materials', {
+      const res = await fetch(`${API_BASE_URL}/materials`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
-          // DON'T set Content-Type for FormData - browser sets it automatically
+          // Browser sets Content-Type for FormData automatically
         },
         body: formData
       });
@@ -119,17 +117,13 @@ export function MaterialsProvider({ children }) {
       const data = await res.json();
       
       if (res.ok) {
-        console.log('✅ Material uploaded:', data.material);
-        // Refresh materials list
         await fetchMaterials();
         await fetchStats();
         return { success: true, material: data.material };
       } else {
-        console.error('❌ Upload failed:', data.message);
         return { success: false, error: data.message };
       }
     } catch (error) {
-      console.error('❌ Error uploading:', error);
       return { success: false, error: error.message };
     } finally {
       setUploading(false);
@@ -142,14 +136,12 @@ export function MaterialsProvider({ children }) {
   const deleteMaterial = useCallback(async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/materials/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/materials/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (res.ok) {
-        console.log('✅ Material deleted');
-        // Optimistically remove from state
         setMaterials(prev => prev.filter(m => m._id !== id));
         await fetchStats();
         return { success: true };
@@ -158,38 +150,30 @@ export function MaterialsProvider({ children }) {
         return { success: false, error: data.message };
       }
     } catch (error) {
-      console.error('❌ Error deleting:', error);
       return { success: false, error: error.message };
     }
   }, [fetchStats]);
 
   /**
    * Download a material
+   * 🛑 FIX: Uses a direct anchor click to handle the Backend redirect properly.
    */
-  const downloadMaterial = useCallback(async (id, originalName) => {
+  const downloadMaterial = useCallback(async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/materials/${id}/download`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       
-      if (res.ok) {
-        // Create download link
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = originalName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        console.log('✅ Download started');
-        return { success: true };
-      } else {
-        return { success: false, error: 'Download failed' };
-      }
+      // We pass the token in the URL because a direct window/link request 
+      // cannot send 'Authorization' headers like fetch can.
+      const downloadUrl = `${API_BASE_URL}/materials/${id}/download?token=${token}`;
+      
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      return { success: true };
     } catch (error) {
       console.error('❌ Error downloading:', error);
       return { success: false, error: error.message };
@@ -209,12 +193,10 @@ export function MaterialsProvider({ children }) {
   // EFFECTS
   // ============================================
   
-  // Fetch materials when filters change
   useEffect(() => {
     fetchMaterials();
   }, [fetchMaterials]);
 
-  // Fetch stats on mount
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
@@ -222,15 +204,11 @@ export function MaterialsProvider({ children }) {
   // ============================================
   // CONTEXT VALUE
   // ============================================
-  
   const value = {
-    // State
     materials,
     loading,
     uploading,
     stats,
-    
-    // Filters
     searchQuery,
     setSearchQuery,
     filterType,
@@ -238,8 +216,6 @@ export function MaterialsProvider({ children }) {
     filterTag,
     setFilterTag,
     clearFilters,
-    
-    // Actions
     fetchMaterials,
     fetchStats,
     uploadMaterial,

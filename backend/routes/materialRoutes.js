@@ -15,7 +15,7 @@ const router = express.Router();
 router.use(protect);
 
 //upload materials with file handling
-router.post("/",protect,upload.single('file'),uploadMaterial);
+router.post("/",upload.single('file'),uploadMaterial);
 
 //get all materials with optional filters
 router.get("/",getMaterials);

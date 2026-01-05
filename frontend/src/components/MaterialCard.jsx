@@ -4,42 +4,35 @@ import { formatFileSize, getFileIcon, getFileColor } from '../utils/fileHelpers'
 import { useMaterials } from '../context/MaterialsContext';
 
 /**
- * FINAL ATTEMPT: Uses the original '/image/upload/' path (as saved in the database) 
- * but forces the format to PDF (f_pdf) for display in the iframe.
- * @param {object} material - The material object from the database.
- * @returns {string} The constructed file URL.
+ * Handles Cloudinary URLs specifically to avoid 401 Unauthorized errors.
+ * 1. Thumbnails (.jpg) are always allowed.
+ * 2. Original PDFs are allowed as long as we don't apply restricted transformations.
  */
-function getCloudinaryPreviewUrl(material) {
-    if (!material.publicId || !material.fileUrl) {
-        return material.fileUrl; 
-    }
-    
-    // 1. Extract the Version Number
-    const versionMatch = material.fileUrl.match(/\/(v\d+)\//);
-    const version = versionMatch ? `${versionMatch[1]}/` : ''; // e.g., 'v1765563391/'
+function getCloudinaryPreviewUrl(material, isThumbnail = false) {
+  if (!material || !material.fileUrl) return '';
 
-    
-    if (material.fileType === 'pdf') {
-        
-        // This is the CRITICAL change: We revert the path to /image/upload/ 
-        // and inject the transformation f_pdf to render the file inline.
-        
-        // Start with the original URL, remove the extension, and remove the raw/upload attempts
-        let correctedUrl = material.fileUrl
-            .replace('/raw/upload/', '/image/upload/') // Ensure it's /image/upload/
-            .replace('/image/upload/', `/image/upload/f_pdf/`); // Inject the f_pdf transformation
-            
-        // We ensure the version is present, though it should be.
-        if (!correctedUrl.includes(version) && version) {
-             correctedUrl = correctedUrl.replace('/image/upload/f_pdf/', `/image/upload/f_pdf/${version}`);
-        }
-        
-        // Remove the file extension (which can break viewing)
-        return correctedUrl.replace(/\.[0-9a-z]+$/i, '');
+  // Images are straightforward
+  if (material.fileType === 'image') return material.fileUrl;
+
+  if (material.fileType === 'pdf') {
+    // 1. Ensure we are using the /image/ path since the backend forces 'image' type
+    let url = material.fileUrl.replace('/raw/upload/', '/image/upload/');
+
+    if (isThumbnail) {
+      // CARD VIEW: Return a JPG of page 1
+      return url.replace(/\.pdf$/i, '.jpg');
+    } else {
+      /**
+       * 🛑 THE FIX:
+       * Browsers block iframes if they think tracking is involved.
+       * Adding 'dn_true' (client-side hint) or simply stripping 
+       * transformations often bypasses strict tracking prevention.
+       */
+      return url.replace('/image/upload/', '/image/upload/f_auto,q_auto/');
     }
-    
-    // Default return for all other types (images, etc.)
-    return material.fileUrl; 
+  }
+
+  return material.fileUrl;
 }
 
 export default function MaterialCard({ material }) {
@@ -86,11 +79,15 @@ export default function MaterialCard({ material }) {
           className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center cursor-pointer"
           onClick={handlePreview}
         >
-          {material.fileType === 'image' ? (
+          {(material.fileType === 'image' || material.fileType === 'pdf') ? (
             <img
-              src={getCloudinaryPreviewUrl(material)}
+              src={getCloudinaryPreviewUrl(material, true)}
               alt={material.title}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                // If the thumbnail fails, hide the image and let the icon show
+                e.target.style.display = 'none';
+              }}
             />
           ) : (
             <div className="text-6xl">
@@ -106,10 +103,10 @@ export default function MaterialCard({ material }) {
                   e.stopPropagation();
                   handlePreview();
                 }}
-                className="p-3 bg-white rounded-full hover:bg-gray-100 transition"
+                className="p-3 bg-white rounded-full hover:bg-gray-100 transition shadow-lg"
                 title="Preview"
               >
-                <Eye size={20} />
+                <span className="text-gray-900"><Eye size={20} /></span>
               </button>
             )}
             <button
@@ -117,31 +114,28 @@ export default function MaterialCard({ material }) {
                 e.stopPropagation();
                 handleDownload();
               }}
-              className="p-3 bg-white rounded-full hover:bg-gray-100 transition"
+              className="p-3 bg-white rounded-full hover:bg-gray-100 transition shadow-lg"
               title="Download"
             >
-              <Download size={20} />
+              <span className="text-gray-900"><Download size={20} /></span>
             </button>
           </div>
         </div>
 
         {/* Content */}
         <div className="p-4">
-          {/* Title */}
           <h3 className="font-semibold text-lg mb-2 truncate" title={material.title}>
             {material.title}
           </h3>
 
-          {/* Description */}
           {material.description && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
               {material.description}
             </p>
           )}
 
-          {/* File Info */}
           <div className="flex items-center gap-2 mb-3 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-            <span className={`px-2 py-1 rounded ${getFileColor(material.fileType)}`}>
+            <span className={`px-2 py-1 rounded font-bold ${getFileColor(material.fileType)}`}>
               {material.fileType.toUpperCase()}
             </span>
             <span>{formatFileSize(material.fileSize)}</span>
@@ -152,7 +146,6 @@ export default function MaterialCard({ material }) {
             </span>
           </div>
 
-          {/* Tags */}
           {material.tags && material.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-3">
               {material.tags.slice(0, 3).map((tag, index) => (
@@ -164,19 +157,13 @@ export default function MaterialCard({ material }) {
                   {tag}
                 </span>
               ))}
-              {material.tags.length > 3 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  +{material.tags.length - 3} more
-                </span>
-              )}
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-2">
             <button
               onClick={handleDownload}
-              className="flex-1 py-2 px-3 bg-accent text-white rounded-lg hover:opacity-90 transition text-sm font-medium flex items-center justify-center gap-2"
+              className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center justify-center gap-2"
             >
               <Download size={16} />
               Download
@@ -203,32 +190,32 @@ export default function MaterialCard({ material }) {
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
           onClick={() => setShowPreview(false)}
         >
-          <div className="max-w-5xl max-h-[90vh] w-full">
+          <div className="max-w-5xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-white font-semibold">{material.title}</h3>
               <button
                 onClick={() => setShowPreview(false)}
-                className="p-2 text-white hover:bg-white/20 rounded transition"
+                className="p-2 text-white hover:bg-white/20 rounded transition text-xl"
               >
                 ✕
               </button>
             </div>
             
-            {material.fileType === 'image' ? (
-              <img
-                src={getCloudinaryPreviewUrl(material)}
-                alt={material.title}
-                className="w-full h-auto max-h-[80vh] object-contain"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : material.fileType === 'pdf' ? (
-              <iframe
-                src={getCloudinaryPreviewUrl(material)}
-                className="w-full h-[80vh] bg-white"
-                onClick={(e) => e.stopPropagation()}
-                title={material.title}
-              />
-            ) : null}
+            <div className="bg-white rounded-lg overflow-hidden h-[80vh]">
+              {material.fileType === 'image' ? (
+                <img
+                  src={getCloudinaryPreviewUrl(material, false)}
+                  alt={material.title}
+                  className="w-full h-full object-contain mx-auto"
+                />
+              ) : material.fileType === 'pdf' ? (
+                <iframe
+                  src={getCloudinaryPreviewUrl(material, false)}
+                  className="w-full h-full border-none"
+                  title={material.title}
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       )}
