@@ -24,6 +24,7 @@ export function ForumProvider({ children }) {
     const [selectedStudent, setSelectedStudent] = useState(null); 
     const [unreadCounts, setUnreadCounts] = useState({});
     
+    const [currentPost, setCurrentPost] = useState(null);
     const socketRef = useRef(null);
     const isConnected = useRef(false);
 
@@ -35,6 +36,18 @@ export function ForumProvider({ children }) {
             setUnreadCounts(prev => ({ ...prev, [selectedStudent._id]: 0 }));
         }
     }, [selectedStudent]);
+
+    useEffect(() => {
+        if (!socketRef.current) return;
+        if (currentPost?._id) {
+            socketRef.current.emit('joinPostRoom', currentPost._id);
+        }
+        return () => {
+            if (currentPost?._id && socketRef.current) {
+                socketRef.current.emit('leavePostRoom', currentPost._id);
+            }
+        };
+    }, [currentPost]);
 
     const fetchStudents = useCallback(async () => {
         try {
@@ -77,7 +90,12 @@ export function ForumProvider({ children }) {
         socketRef.current = io('http://localhost:5000', { auth: { token } });
         const socket = socketRef.current;
 
-        socket.on('connect', () => { isConnected.current = true; });
+        socket.on('connect', () => {
+            isConnected.current = true;
+            if (currentPost?._id) {
+                socket.emit('joinPostRoom', currentPost._id);
+            }
+         });
 
         // --- 1. PRIVATE MESSAGES (Isolated Conversations) ---
         socket.on('receivePrivateMessage', (message) => {
@@ -119,7 +137,13 @@ export function ForumProvider({ children }) {
         });
 
         socket.on('newPost', (post) => setPosts(prev => [post, ...prev]));
-        socket.on('newComment', (comment) => setComments(prev => [...prev, comment]));
+        socket.on('newComment', (comment) => {
+            setComments(prev => {
+                // Avoid duplicate if optimistic update already added it
+                if (prev.find(c => c._id === comment._id)) return prev;
+                return [...prev, comment];
+            });
+        });
 
         return () => socket.disconnect();
     }, [user, getMyId, selectedStudent]);
@@ -145,20 +169,29 @@ export function ForumProvider({ children }) {
             setLoading(true);
             const res = await fetch(`http://localhost:5000/api/forum/posts`);
             const data = await res.json();
-            if (res.ok) setComments(data.comments || []);
+            if (res.ok) {
+                setPosts(data.posts || data || []);       // store posts
+                setComments(data.comments || []);         // store comments
+            }
         } catch (error) { console.error('Error:', error); }
         finally { setLoading(false); }
     }, []);
 
     const addComment = useCallback((postId, content) => {
-        return new Promise((resolve, reject) => {
-            if (!socketRef.current) return;
-            socketRef.current.emit('addComment', { postId, content }, (res) => {
-                if (res.success) resolve(res.comment);
-                else reject(new Error(res.error));
-            });
+    return new Promise((resolve, reject) => {
+        if (!socketRef.current) return;
+        socketRef.current.emit('addComment', { postId, content }, (res) => {
+            if (res.success) {
+                setComments(prev => {
+                    if (prev.find(c => c._id === res.comment._id)) return prev;
+                    return [...prev, res.comment];
+                });
+                resolve(res.comment);
+            }
+            else reject(new Error(res.error));
         });
-    }, []);
+    });
+}, []);
 
     useEffect(() => {
         fetchPosts();
@@ -169,7 +202,8 @@ export function ForumProvider({ children }) {
         posts, comments, loading, students, onlineUsers, 
         privateMessages, // Now an Object grouped by user
         selectedStudent, setSelectedStudent, unreadCounts, 
-        fetchChatHistory, sendPrivateMessage, addComment
+        fetchChatHistory, sendPrivateMessage, addComment,
+        currentPost, setCurrentPost,
     };
 
     return <ForumContext.Provider value={value}>{children}</ForumContext.Provider>;

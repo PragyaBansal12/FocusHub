@@ -134,7 +134,6 @@ export async function getMaterials(req, res) {
  */
 export async function downloadMaterial(req, res) {
   try {
-    // Note: Use req.user.id from your protect middleware
     const material = await Material.findOne({ _id: req.params.id, user: req.user.id });
     
     if (!material) return res.status(404).json({ message: "Material not found" });
@@ -145,22 +144,30 @@ export async function downloadMaterial(req, res) {
     await material.save();
     
     /**
-     * 🛑 THE FIX: Force the attachment flag.
-     * We also ensure the URL uses /image/ path because PDFs were uploaded as 'image' type.
+     * 🛑 THE STABLE FIX FOR PDF DOWNLOADS:
+     * 1. Add fl_attachment to force download.
+     * 2. Force /image/ path because PDFs were uploaded as 'image' type.
+     * 3. STRIP the .pdf extension if it's a PDF. 
+     * Cloudinary serves 'image' resources via their publicId; 
+     * adding .pdf at the end of an /image/ path causes ERR_INVALID_RESPONSE.
      */
     let downloadUrl = material.fileUrl
       .replace('/upload/', '/upload/fl_attachment/')
       .replace('/raw/upload/', '/image/upload/');
     
-    console.log(`📥 [Download] Redirecting to: ${downloadUrl}`);
+    if (material.fileType === 'pdf') {
+       // Removes .pdf from the end of the URL
+       downloadUrl = downloadUrl.replace(/\.pdf$/i, '');
+    }
+    
+    console.log(`📥 [Download] Fixed Redirect: ${downloadUrl}`);
     res.redirect(downloadUrl);
 
   } catch (err) {
-    console.error("Download Error:", err);
+    console.error("❌ Download Error:", err);
     res.status(500).json({ success: false, message: "Download failed" });
   }
 }
-
 /**
  * @route   DELETE /api/materials/:id
  */

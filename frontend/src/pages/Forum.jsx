@@ -45,7 +45,7 @@ export default function Forum() {
       if (selectedStudent) {
         await sendPrivateMessage(selectedStudent._id, msgInput);
       } else {
-        const postId = currentPost?._id || "global"; 
+        const postId = currentPost?._id || null; 
         await addComment(postId, msgInput);
       }
       setMsgInput("");

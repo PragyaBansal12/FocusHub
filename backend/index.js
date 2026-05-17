@@ -46,7 +46,7 @@ app.use(cors({
 
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+
   next();
 });
 
@@ -85,7 +85,7 @@ app.use("/api/materials", materialRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/forum", forumRoutes);
 app.use("/api/calendar", calendarRoutes);
-app.use("/api/message",messageRoutes);
+app.use("/api/messages",messageRoutes);
 app.use("/api/user",userRoutes);
 
 

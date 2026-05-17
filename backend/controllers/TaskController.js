@@ -2,10 +2,6 @@ import Task from "../models/Task.js";
 import User from "../models/User.js"; 
 import { getCalendarClient } from './calendarController.js'; 
 
-// ===================================
-// CALENDAR HELPER FUNCTIONS
-// ===================================
-
 // Helper to remove event from Google Calendar and clear local ID
 const deleteTaskEvent = async (userId, task) => {
     // Only proceed if there is a Google Event ID to delete
@@ -20,8 +16,7 @@ const deleteTaskEvent = async (userId, task) => {
         
         await calendar.events.delete({ calendarId, eventId: task.googleEventId });
         console.log("🗑️ Google Event deleted:", task.googleEventId);
-        
-        // Always clear the local ID after a successful (or assumed successful) deletion attempt
+ 
         await Task.findByIdAndUpdate(task._id, { $set: { googleEventId: null, googleCalendarId: null } });
 
     } catch (err) {
@@ -34,7 +29,6 @@ const deleteTaskEvent = async (userId, task) => {
     }
 };
 
-// 🔥 CRITICAL FIX: Helper to create or update event in Google Calendar
 const syncTaskToCalendar = async (userId, task) => {
     // 1. Skip if task is completed or has no due date
     if (task.completed || !task.dueDate) {
@@ -97,11 +91,7 @@ const syncTaskToCalendar = async (userId, task) => {
 };
 
 
-// ===================================
-// TASK CRUD OPERATIONS (INTEGRATED)
-// ===================================
-
-// ✅ GET all tasks for logged-in user
+//crud operations
 export async function getTasks(req, res) {
     try {
         const tasks = await Task.find({ user: req.user.id }).sort({ createdAt: -1 }); 
@@ -111,11 +101,10 @@ export async function getTasks(req, res) {
     }
 }
 
-// ✅ CREATE new task
 export async function createTask(req, res) {
     try {
         const { title, description, dueDate, priority, tags } = req.body;
-        // ... (validation logic remains the same) ...
+
         if (!title || title.trim() === "") {
             return res.status(400).json({ message: "Title is required" });
         }
@@ -133,11 +122,9 @@ export async function createTask(req, res) {
         }
         
         let task = await Task.create(taskData);
-        
-        // 🔥 INTEGRATION: Sync to Calendar
+
         await syncTaskToCalendar(req.user.id, task); 
-        
-        // Re-fetch the task to get the potentially updated googleEventId
+
         task = await Task.findById(task._id); 
 
         res.status(201).json({ message: "Task created", task });
@@ -147,7 +134,6 @@ export async function createTask(req, res) {
     }
 }
 
-// ✅ UPDATE task
 export async function updateTask(req, res) {
     try {
         const { id } = req.params;
@@ -167,7 +153,7 @@ export async function updateTask(req, res) {
         Object.assign(task, updates);
         await task.save();
 
-        // 🔥 INTEGRATION: Sync to Calendar (will delete event if dueDate is null/completed, or update/create otherwise)
+        // INTEGRATION: Sync to Calendar (will delete event if dueDate is null/completed, or update/create otherwise)
         await syncTaskToCalendar(req.user.id, task); 
         
         // Re-fetch the task to get the potentially updated googleEventId
@@ -179,7 +165,6 @@ export async function updateTask(req, res) {
     }
 }
 
-// ✅ DELETE task
 export async function deleteTask(req, res) {
     try {
         const { id } = req.params;
@@ -190,7 +175,7 @@ export async function deleteTask(req, res) {
             return res.status(404).json({ message: "Task not found or unauthorized" });
         }
         
-        // 🔥 INTEGRATION: Delete event from Calendar
+        // INTEGRATION: Delete event from Calendar
         await deleteTaskEvent(req.user.id, task); 
         
         res.json({ message: "Task deleted" });
@@ -199,8 +184,6 @@ export async function deleteTask(req, res) {
     }
 }
 
-// ✅ TOGGLE task completion
-// Note: This function name matches the one exported in your TaskRoutes.js
 export async function toggleTask(req, res) {
     try {
         const { id } = req.params;
@@ -215,7 +198,7 @@ export async function toggleTask(req, res) {
         task.completed = !task.completed;
         await task.save();
         
-        // 2. 🔥 INTEGRATION: Sync to Calendar
+        // 2.INTEGRATION: Sync to Calendar
         // If completed: syncTaskToCalendar will call deleteTaskEvent
         // If incomplete: syncTaskToCalendar will re-add/update the event
         await syncTaskToCalendar(req.user.id, task); 

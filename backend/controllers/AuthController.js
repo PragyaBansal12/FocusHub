@@ -9,10 +9,6 @@ const client = new OAuth2Client(process.env.GOOGLE_LOGIN_CLIENT_ID);
 // Helper to provide a default avatar if none exists
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?background=random&color=fff&name=";
 
-/**
- * HELPER: Standardize Token Response
- * Sets the cookie and sends the user data back to frontend
- */
 const sendTokenResponse = (user, statusCode, res, message) => {
     const appToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
@@ -37,7 +33,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     });
 };
 
-// --- GOOGLE LOGIN (Existing Users Only) ---
+
 export async function googleLogin(req, res) {
     const { token } = req.body;
 
@@ -52,7 +48,6 @@ export async function googleLogin(req, res) {
 
         const user = await User.findOne({ email: normalizedEmail });
 
-        // 🔥 VALIDATION: If user doesn't exist, don't allow login
         if (!user) {
             return res.status(404).json({ 
                 message: "No account found with this email. Please Sign Up first." 
@@ -82,7 +77,6 @@ export async function googleSignup(req, res) {
 
         const existingUser = await User.findOne({ email: normalizedEmail });
 
-        // 🔥 VALIDATION: If user already exists, don't allow duplicate signup
         if (existingUser) {
             return res.status(400).json({ 
                 message: "An account already exists with this email. Please Log In." 

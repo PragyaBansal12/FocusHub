@@ -1,9 +1,7 @@
-// controllers/calendarController.js - FINAL CORRECTED VERSION
-
 import { config } from 'dotenv';
 import { google } from 'googleapis';
 import User from '../models/User.js'; 
-import jwt from 'jsonwebtoken'; // 🔥 1. CRITICAL: Import jsonwebtoken for creating the user token
+import jwt from 'jsonwebtoken'; 
 
 config(); 
 
@@ -17,9 +15,6 @@ const oauth2Client = new google.auth.OAuth2(
 // Define the scopes (permissions) required
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
-// ----------------------------------------------------
-// 🔥 EXPORTED: HELPER FUNCTION TO GET CALENDAR API CLIENT
-// ----------------------------------------------------
 export const getCalendarClient = async (userId) => { 
     const user = await User.findById(userId);
     if (!user || !user.googleCalendar || !user.googleCalendar.refreshToken) {
@@ -47,11 +42,7 @@ export const getCalendarClient = async (userId) => {
     
     return google.calendar({ version: 'v3', auth: oauth2Client });
 };
-// ----------------------------------------------------
 
-// ----------------------------------------------------
-// 1. Initiate Google OAuth Flow (GET /api/calendar/google)
-// ----------------------------------------------------
 export const googleAuth = (req, res) => {
     const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline', 
@@ -62,9 +53,6 @@ export const googleAuth = (req, res) => {
     res.json({ authUrl });
 };
 
-// ----------------------------------------------------
-// 2. Google OAuth Callback (GET /api/calendar/google/callback)
-// ----------------------------------------------------
 export const googleAuthCallback = async (req, res) => {
     const { code, state: userId } = req.query;
     const FRONTEND_URL = "http://localhost:5173"; 
@@ -89,12 +77,10 @@ export const googleAuthCallback = async (req, res) => {
             }
         });
 
-        // 🔥 2. CRITICAL FIX: Sign a new JWT for the user 
         const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-            expiresIn: '7d', // Use your standard token expiry
+            expiresIn: '7d',
         });
 
-        // 🔥 3. CRITICAL FIX: Set the JWT cookie to re-authenticate the user
         res.cookie('token', token, {
             httpOnly: true,
             secure: false, // Set to false for localhost/http development
@@ -111,9 +97,6 @@ export const googleAuthCallback = async (req, res) => {
     }
 };
 
-// ----------------------------------------------------
-// 3. Check Sync Status (GET /api/calendar/status)
-// ----------------------------------------------------
 export const checkSyncStatus = async (req, res) => {
     const user = await User.findById(req.user.id); 
     // Check if the refreshToken exists to determine sync status
@@ -121,9 +104,6 @@ export const checkSyncStatus = async (req, res) => {
     res.json({ isSynced });
 };
 
-// ----------------------------------------------------
-// 4. Disconnect Calendar (DELETE /api/calendar/disconnect)
-// ----------------------------------------------------
 export const disconnectCalendar = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);

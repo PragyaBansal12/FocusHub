@@ -28,8 +28,8 @@ function getCloudinaryPreviewUrl(material, isThumbnail = false) {
        * Adding 'dn_true' (client-side hint) or simply stripping 
        * transformations often bypasses strict tracking prevention.
        */
-      return url.replace('/image/upload/', '/image/upload/f_auto,q_auto/');
-    }
+      return url.replace(/\.pdf$/i, '');    
+  }
   }
 
   return material.fileUrl;

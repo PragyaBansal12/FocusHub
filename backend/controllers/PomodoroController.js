@@ -1,7 +1,6 @@
 import Pomodoro from "../models/Pomodoro.js";
 import Task from "../models/Task.js";
 
-// ✅ Save a completed pomodoro session
 export async function saveSession(req, res) {
   try {
     console.log("📥 Saving pomodoro session");
