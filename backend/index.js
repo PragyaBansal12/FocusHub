@@ -15,7 +15,7 @@ import taskRoutes from "./routes/taskRoutes.js"
 import pomodoroRoutes from "./routes/pomodoroRoutes.js";
 import materialRoutes from "./routes/materialRoutes.js";
 import analyticsRoutes from "./routes/AnalyticsRoutes.js";
-import forumRoutes from "./routes/forumRoutes.js";
+import communityChatRoutes from "./routes/communityChatRoutes.js";
 import calendarRoutes from "./routes/calendarRoutes.js"
 import messageRoutes from "./routes/messageRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -83,7 +83,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/pomodoro", pomodoroRoutes);
 app.use("/api/materials", materialRoutes);
 app.use("/api/analytics", analyticsRoutes);
-app.use("/api/forum", forumRoutes);
+app.use("/api/community", communityChatRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/messages",messageRoutes);
 app.use("/api/user",userRoutes);
@@ -98,18 +98,7 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(async() => {
  console.log("Connected to MongoDB");
 
-/*try {
-   const globalRoom = await Post.findOne({ title: "Global Community Discussion" });
-   if (!globalRoom) {
-     // Create a "System" user or use a fixed admin ID if you have one
-     // For now, we just ensure at least one post exists to act as the 'Common Forum'
-     console.log("Creating Global Community Room...");
-     // Note: This requires at least one user to exist in your DB to act as the 'author'
-     // Or you can skip this if you prefer to create the first post manually via the UI
-   }
- } catch (err) {
-   console.log("Global room check skipped: ", err.message);
- }*/
+
 
  startScheduler();
  httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
