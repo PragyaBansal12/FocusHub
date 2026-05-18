@@ -1,7 +1,6 @@
-import Post from "../models/Post.js"
-import Comment from "../models/Comment.js";
 import User from "../models/User.js";
 import Message from "../models/Message.js"; 
+import CommunityMessage from "../models/CommunityMessage.js";
 import jwt from "jsonwebtoken";
 
 // 🔥 FIX: Track multiple sockets per user to support multi-tab DMs
@@ -93,21 +92,28 @@ export function setupSocketHandlers(io){
             }
         });
 
-        // --- Keep all your Forum join/leave/post/comment logic exactly as it was below ---
-        socket.on('joinPost', (postId) => { socket.join(`post:${postId}`); });
-        socket.on('leavePost', (postId) => { socket.leave(`post:${postId}`); });
-        
-        socket.on('addComment', async (data, callback) => {
-            try {
-                const { postId, content } = data;
-                const comment = await Comment.create({ post: postId, user: userId, content });
-                await comment.populate('user', 'name email picture');
-                await Post.findByIdAndUpdate(postId, { $inc: { commentCount: 1 } });
-                io.to(`post:${postId}`).emit('newComment', comment);
-                callback({ success: true, comment });
-            } catch (error) { callback({ success: false, error: error.message }); }
+        // --- COMMUNITY CHAT LOGIC ---
+        socket.on('joinCommunity', () => { 
+            socket.join(`community_chat`); 
         });
         
-        // ... (Rest of your voting/typing handlers remain unchanged)
+        socket.on('leaveCommunity', () => { 
+            socket.leave(`community_chat`); 
+        });
+        
+        socket.on('sendCommunityMessage', async (data, callback) => {
+            try {
+                const { text } = data;
+                if (!text) return callback({ success: false, error: 'Content required' });
+
+                const newMessage = await CommunityMessage.create({ sender: userId, text });
+                const populatedMsg = await newMessage.populate('sender', 'name email profilePicture');
+                
+                io.to(`community_chat`).emit('receiveCommunityMessage', populatedMsg);
+                callback({ success: true, message: populatedMsg });
+            } catch (error) { 
+                callback({ success: false, error: error.message }); 
+            }
+        });
     });
 }
