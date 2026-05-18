@@ -15,14 +15,14 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: false, // because Google users won't have password
+      required: false,
     },
     googleId: {
       type: String,
       required: false,
     },
     profilePicture: { type: String, required: false },
-    googleCalendar:{
+    googleCalendar: {
       accessToken: String,
       refreshToken: String,
       calendarId: String,
