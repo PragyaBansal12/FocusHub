@@ -5,12 +5,14 @@ import jwt from 'jsonwebtoken';
 
 config(); 
 
-// 1. Setup OAuth2 Client
-const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-);
+// 1. Helper to Setup OAuth2 Client per request
+const getOAuth2Client = () => {
+    return new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
+};
 
 // Define the scopes (permissions) required
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
@@ -21,30 +23,47 @@ export const getCalendarClient = async (userId) => {
         return null; 
     }
 
-    oauth2Client.setCredentials({ refresh_token: user.googleCalendar.refreshToken });
+    const client = getOAuth2Client();
+    client.setCredentials({ refresh_token: user.googleCalendar.refreshToken });
 
-    if (!user.googleCalendar.accessToken || Date.now() >= user.googleCalendar.tokenExpiryDate.getTime()) {
+    // Check if token is expired or close to expiring (within a 5-minute buffer)
+    if (!user.googleCalendar.accessToken || Date.now() >= user.googleCalendar.tokenExpiryDate.getTime() - 5 * 60 * 1000) {
         try {
-            const { credentials } = await oauth2Client.refreshAccessToken();
+            const { credentials } = await client.refreshAccessToken();
             
+            const updateFields = {
+                'googleCalendar.accessToken': credentials.access_token,
+                'googleCalendar.tokenExpiryDate': new Date(credentials.expiry_date),
+            };
+            
+            if (credentials.refresh_token) {
+                updateFields['googleCalendar.refreshToken'] = credentials.refresh_token;
+            }
+
             await User.findByIdAndUpdate(userId, {
-                $set: {
-                    'googleCalendar.accessToken': credentials.access_token,
-                    'googleCalendar.tokenExpiryDate': new Date(credentials.expiry_date),
-                }
+                $set: updateFields
             });
-            oauth2Client.setCredentials(credentials); 
+            client.setCredentials(credentials); 
         } catch (error) {
             console.error("Error refreshing Google Access Token:", error.message);
+            
+            // If the refresh token is invalid/expired/revoked, automatically disconnect the calendar
+            if (error.message.includes('invalid_grant') || error.message.includes('expired') || error.message.includes('revoked')) {
+                console.log(`Clearing expired/invalid Google Calendar credentials for user ${userId}`);
+                await User.findByIdAndUpdate(userId, {
+                    $unset: { googleCalendar: 1 }
+                });
+            }
             return null;
         }
     }
     
-    return google.calendar({ version: 'v3', auth: oauth2Client });
+    return google.calendar({ version: 'v3', auth: client });
 };
 
 export const googleAuth = (req, res) => {
-    const authUrl = oauth2Client.generateAuthUrl({
+    const client = getOAuth2Client();
+    const authUrl = client.generateAuthUrl({
         access_type: 'offline', 
         scope: SCOPES,
         prompt: 'consent', 
@@ -58,23 +77,35 @@ export const googleAuthCallback = async (req, res) => {
     const FRONTEND_URL = "http://localhost:5173"; 
 
     try {
+        const client = getOAuth2Client();
         // 1. Exchange the authorization code for tokens
-        const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
+        const { tokens } = await client.getToken(code);
+        client.setCredentials(tokens);
 
-        // 2. Determine token expiry
-        // Calculate the actual expiry date based on current time + expiresIn seconds
-        const expiryDate = new Date(Date.now() + tokens.expires_in * 1000); 
+        // 2. Determine token expiry safely
+        // Use tokens.expiry_date (epoch milliseconds) if available, or fall back to tokens.expires_in (seconds) or 1 hour.
+        let expiryDate;
+        if (tokens.expiry_date) {
+            expiryDate = new Date(tokens.expiry_date);
+        } else if (tokens.expires_in) {
+            expiryDate = new Date(Date.now() + tokens.expires_in * 1000);
+        } else {
+            expiryDate = new Date(Date.now() + 3600 * 1000); // 1 hour default fallback
+        }
 
-        // 3. Find and update the user with the new token information
+        // 3. Find and update the user with the new token information safely
+        const updateFields = {
+            'googleCalendar.accessToken': tokens.access_token,
+            'googleCalendar.tokenExpiryDate': expiryDate,
+            'googleCalendar.calendarId': process.env.GOOGLE_CALENDAR_ID || 'primary',
+        };
+
+        if (tokens.refresh_token) {
+            updateFields['googleCalendar.refreshToken'] = tokens.refresh_token;
+        }
+
         await User.findByIdAndUpdate(userId, {
-            $set: {
-                'googleCalendar.accessToken': tokens.access_token,
-                // Only save the refresh token if it was provided (first time sync)
-                'googleCalendar.refreshToken': tokens.refresh_token || undefined, 
-                'googleCalendar.tokenExpiryDate': expiryDate,
-                'googleCalendar.calendarId': process.env.GOOGLE_CALENDAR_ID || 'primary',
-            }
+            $set: updateFields
         });
 
         const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -92,8 +123,13 @@ export const googleAuthCallback = async (req, res) => {
         res.redirect(`${FRONTEND_URL}/tasks?sync=success`);
 
     } catch (error) {
-        console.error("Error during Google OAuth callback:", error);
-        res.redirect(`${FRONTEND_URL}/tasks?sync=error`);
+        const errorCode = error.response?.data?.error || error.message || 'unknown_error';
+        console.error("=== Google Calendar OAuth Error ===");
+        console.error("Error message:", error.message);
+        console.error("Error response data:", error.response?.data);
+        console.error("Error code:", errorCode);
+        console.error("===================================");
+        res.redirect(`${FRONTEND_URL}/tasks?sync=error&reason=${encodeURIComponent(errorCode)}`);
     }
 };
 
@@ -113,8 +149,9 @@ export const disconnectCalendar = async (req, res) => {
         
         // 1. Attempt to revoke the token on Google's side
         try {
-            oauth2Client.setCredentials({ refresh_token: user.googleCalendar.refreshToken });
-            await oauth2Client.revokeCredentials();
+            const client = getOAuth2Client();
+            client.setCredentials({ refresh_token: user.googleCalendar.refreshToken });
+            await client.revokeCredentials();
         } catch (revokeError) {
             // Log the error but continue to remove local credentials
             console.warn("Could not revoke Google token. Credentials may have expired on Google's side.", revokeError.message);
