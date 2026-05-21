@@ -1,207 +1,236 @@
 import Task from "../models/Task.js";
 import Pomodoro from "../models/Pomodoro.js";
+import mongoose from "mongoose";
 
-// ============================================
-// FOCUS TIME ANALYTICS
-// ============================================
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
 
-/**
- * Get daily focus time for the past N days
- */
+/** Clamp a query-param integer to a safe range */
+const parsePositiveInt = (value, defaultVal, max = 365) => {
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n) || n < 1) return defaultVal;
+  return Math.min(n, max);
+};
+
+/** Build a UTC Date for N days ago at midnight */
+const daysAgoMidnight = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+// ─────────────────────────────────────────────
+// FOCUS TIME  (daily breakdown for past N days)
+// ─────────────────────────────────────────────
+
 export async function getFocusTime(req, res) {
   try {
-    const { days = 30 } = req.query;
-    const userId = req.userId;
+    const userId = req.user?.id; // ✅ FIX: was req.userId (always undefined)
+    if (!userId) return res.status(401).json({ message: "Unauthorised" });
 
-    // Calculate date range
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
-    startDate.setHours(0, 0, 0, 0);
+    const days = parsePositiveInt(req.query.days, 30, 365);
+    const startDate = daysAgoMidnight(days);
 
-    // Get all focus sessions in date range
-    const sessions = await Pomodoro.find({
-      user: userId,
-      type: 'focus',
-      completedAt: { $gte: startDate }
-    }).sort({ completedAt: 1 });
+    // ── Aggregation pipeline – group by date string, sum duration ──
+    const rawData = await Pomodoro.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(userId),
+          type: "focus",
+          completedAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$completedAt" },
+          },
+          totalSeconds: { $sum: "$duration" },
+          sessions: { $sum: 1 },
+        },
+      },
+    ]);
 
-    // Group by date
-    const dailyData = {};
-    sessions.forEach(session => {
-      const date = new Date(session.completedAt).toISOString().split('T')[0];
-      if (!dailyData[date]) {
-        dailyData[date] = { date, hours: 0, sessions: 0 };
-      }
-      dailyData[date].hours += session.duration / 3600; // Convert seconds to hours
-      dailyData[date].sessions += 1;
-    });
+    // Index by date for O(1) lookup when filling gaps
+    const byDate = {};
+    let totalSeconds = 0;
+    let totalSessions = 0;
+    for (const row of rawData) {
+      byDate[row._id] = row;
+      totalSeconds += row.totalSeconds;
+      totalSessions += row.sessions;
+    }
 
-    // Fill in missing dates with 0
+    // Fill every calendar day in the range (including days with 0 activity)
     const data = [];
-    for (let i = parseInt(days) - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      data.push(dailyData[dateStr] || {
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const row = byDate[dateStr];
+      data.push({
         date: dateStr,
-        hours: 0,
-        sessions: 0
+        hours: row ? parseFloat((row.totalSeconds / 3600).toFixed(2)) : 0,
+        sessions: row ? row.sessions : 0,
       });
     }
 
-    const totalMinutes = sessions.reduce((sum, s) => sum + s.duration, 0) / 60;
-
-    res.json({
+    return res.json({
       data,
-      totalMinutes: Math.round(totalMinutes),
-      totalSessions: sessions.length
+      totalMinutes: Math.round(totalSeconds / 60),
+      totalSessions,
     });
   } catch (err) {
-    console.error('Error fetching focus time:', err);
-    res.status(500).json({ message: 'Error fetching focus time', error: err.message });
+    console.error("Error fetching focus time:", err);
+    return res.status(500).json({ message: "Error fetching focus time", error: err.message });
   }
 }
 
-// ============================================
+// ─────────────────────────────────────────────
 // TASK ANALYTICS
-// ============================================
+// ─────────────────────────────────────────────
 
-/**
- * Get task statistics
- */
 export async function getTaskAnalytics(req, res) {
   try {
-    const userId = req.userId;
+    const userId = req.user?.id; // ✅ FIX
+    if (!userId) return res.status(401).json({ message: "Unauthorised" });
 
-    // Get all tasks
-    const tasks = await Task.find({ user: userId });
+    // ── Single aggregation instead of fetching all tasks into JS ──
+    const [result] = await Task.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          completed: { $sum: { $cond: ["$completed", 1, 0] } },
+          highPriority: {
+            $sum: { $cond: [{ $eq: ["$priority", "high"] }, 1, 0] },
+          },
+          mediumPriority: {
+            $sum: { $cond: [{ $eq: ["$priority", "medium"] }, 1, 0] },
+          },
+          lowPriority: {
+            $sum: { $cond: [{ $eq: ["$priority", "low"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
 
-    const total = tasks.length;
-    const completed = tasks.filter(t => t.completed).length;
+    const total = result?.total ?? 0;
+    const completed = result?.completed ?? 0;
     const pending = total - completed;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    // Count by priority
-    const tasksByPriority = {
-      high: tasks.filter(t => t.priority === 'high').length,
-      medium: tasks.filter(t => t.priority === 'medium').length,
-      low: tasks.filter(t => t.priority === 'low').length
-    };
-
-    res.json({
-      taskStats: {
-        total,
-        completed,
-        pending,
-        completionRate
+    return res.json({
+      taskStats: { total, completed, pending, completionRate },
+      tasksByPriority: {
+        high: result?.highPriority ?? 0,
+        medium: result?.mediumPriority ?? 0,
+        low: result?.lowPriority ?? 0,
       },
-      tasksByPriority
     });
   } catch (err) {
-    console.error('Error fetching task analytics:', err);
-    res.status(500).json({ message: 'Error fetching task analytics', error: err.message });
+    console.error("Error fetching task analytics:", err);
+    return res.status(500).json({ message: "Error fetching task analytics", error: err.message });
   }
 }
 
-// ============================================
-// POMODORO ANALYTICS
-// ============================================
+// ─────────────────────────────────────────────
+// POMODORO SESSION BREAKDOWN
+// ─────────────────────────────────────────────
 
-/**
- * Get pomodoro sessions breakdown
- */
 export async function getPomodoroSessions(req, res) {
   try {
-    const { days = 7 } = req.query;
-    const userId = req.userId;
+    const userId = req.user?.id; // ✅ FIX
+    if (!userId) return res.status(401).json({ message: "Unauthorised" });
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
-    startDate.setHours(0, 0, 0, 0);
+    const days = parsePositiveInt(req.query.days, 7, 90);
+    const startDate = daysAgoMidnight(days);
 
-    // Get sessions
-    const sessions = await Pomodoro.find({
-      user: userId,
-      type: 'focus',
-      completedAt: { $gte: startDate }
-    }).sort({ completedAt: 1 });
+    // ── Single aggregation for day-of-week and hourly breakdowns ──
+    const rawData = await Pomodoro.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(userId),
+          type: "focus",
+          completedAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$completedAt" } },
+            dayOfWeek: { $dayOfWeek: "$completedAt" }, // 1=Sun … 7=Sat
+            hour: { $hour: "$completedAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
 
-    // Group by day of week
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dailyData = {};
-    
-    sessions.forEach(session => {
-      const date = new Date(session.completedAt);
-      const dayName = dayNames[date.getDay()];
-      dailyData[dayName] = (dailyData[dayName] || 0) + 1;
-    });
+    // ── Day-of-week summary ──
+    const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayTotals = new Array(7).fill(0);
+    const hourTotals = new Array(24).fill(0);
+    const uniqueDates = new Set();
 
-    // Format for chart
-    const data = dayNames.map(day => ({
-      day,
-      sessions: dailyData[day] || 0
-    }));
+    for (const row of rawData) {
+      const dow = row._id.dayOfWeek - 1; // convert 1-7 → 0-6
+      dayTotals[dow] += row.count;
+      hourTotals[row._id.hour] += row.count;
+      uniqueDates.add(row._id.date);
+    }
 
-    // Productivity by hour (0-23)
-    const hourlyData = Array(24).fill(0);
-    sessions.forEach(session => {
-      const hour = new Date(session.completedAt).getHours();
-      hourlyData[hour] += 1;
-    });
+    const data = DAY_NAMES.map((day, i) => ({ day, sessions: dayTotals[i] }));
 
-    const productivityByHour = hourlyData
-      .map((count, hour) => ({
-        hour: `${hour}:00`,
-        sessions: count
-      }))
-      .filter(item => item.sessions > 0); // Only show hours with activity
+    const productivityByHour = hourTotals
+      .map((count, hour) => ({ hour: `${hour}:00`, sessions: count }))
+      .filter((h) => h.sessions > 0);
 
-    const mostProductiveHour = hourlyData.indexOf(Math.max(...hourlyData));
+    const maxHourVal = Math.max(...hourTotals);
+    const mostProductiveHour =
+      maxHourVal > 0 ? `${hourTotals.indexOf(maxHourVal)}:00` : null;
 
-    // Calculate streak
-    const streakData = calculateStreak(sessions);
+    const totalSessions = hourTotals.reduce((a, b) => a + b, 0);
+    const avgPerDay = days > 0 ? parseFloat((totalSessions / days).toFixed(2)) : 0;
 
-    res.json({
+    // ── Streak calculation (works on unique date strings) ──
+    const streakData = calculateStreak(Array.from(uniqueDates));
+
+    return res.json({
       data,
       productivityByHour,
-      mostProductiveHour: mostProductiveHour !== -1 ? `${mostProductiveHour}:00` : null,
-      avgPerDay: sessions.length / parseInt(days),
-      streakData
+      mostProductiveHour,
+      avgPerDay,
+      streakData,
     });
   } catch (err) {
-    console.error('Error fetching pomodoro sessions:', err);
-    res.status(500).json({ message: 'Error fetching pomodoro sessions', error: err.message });
+    console.error("Error fetching pomodoro sessions:", err);
+    return res.status(500).json({ message: "Error fetching pomodoro sessions", error: err.message });
   }
 }
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
+// ─────────────────────────────────────────────
+// HELPER — streak calculation
+// ─────────────────────────────────────────────
 
-/**
- * Calculate current and longest streak
- */
-function calculateStreak(sessions) {
-  if (sessions.length === 0) {
+function calculateStreak(dateStrings) {
+  if (!dateStrings.length) {
     return { currentStreak: 0, longestStreak: 0, lastActiveDate: null };
   }
 
-  // Sort by date
-  const dates = [...new Set(
-    sessions.map(s => new Date(s.completedAt).toISOString().split('T')[0])
-  )].sort();
+  const dates = [...new Set(dateStrings)].sort(); // unique & ascending
 
-  let currentStreak = 1;
   let longestStreak = 1;
   let tempStreak = 1;
 
   for (let i = 1; i < dates.length; i++) {
-    const prevDate = new Date(dates[i - 1]);
-    const currDate = new Date(dates[i]);
-    const dayDiff = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
-
-    if (dayDiff === 1) {
+    const prev = new Date(dates[i - 1]);
+    const curr = new Date(dates[i]);
+    const diffDays = Math.round((curr - prev) / 86_400_000);
+    if (diffDays === 1) {
       tempStreak++;
       longestStreak = Math.max(longestStreak, tempStreak);
     } else {
@@ -209,21 +238,17 @@ function calculateStreak(sessions) {
     }
   }
 
-  // Check if current streak is still active
+  // Is the streak still active? (last session was today or yesterday)
   const lastDate = new Date(dates[dates.length - 1]);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const daysSinceLastSession = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+  const daysSinceLast = Math.round((today - lastDate) / 86_400_000);
 
-  if (daysSinceLastSession <= 1) {
-    currentStreak = tempStreak;
-  } else {
-    currentStreak = 0;
-  }
+  const currentStreak = daysSinceLast <= 1 ? tempStreak : 0;
 
   return {
     currentStreak,
     longestStreak,
-    lastActiveDate: dates[dates.length - 1]
+    lastActiveDate: dates[dates.length - 1],
   };
 }
