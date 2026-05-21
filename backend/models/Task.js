@@ -52,6 +52,14 @@ const taskSchema = new mongoose.Schema(
     sendOverdueAlert:{
         type:Boolean,
         default: false,
+    },
+    reminder3hSent: {
+        type: Boolean,
+        default: false,
+    },
+    reminder1hSent: {
+        type: Boolean,
+        default: false,
     }
 },
 {

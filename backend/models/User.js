@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema(
       calendarId: String,
       tokenExpiryDate: Date,
     },
+    pushSubscriptions: {
+      type: Array,
+      default: [],
+    },
   },
   { timestamps: true }
 );

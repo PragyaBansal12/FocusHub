@@ -4,6 +4,7 @@ import cron from 'node-cron';
 import Task from '../models/Task.js';
 import User from '../models/User.js';
 import { sendOverdueAlertEmail } from './emailService.js';
+import { sendPushNotification } from './pushNotificationService.js';
 
 // The function that runs on the schedule
 const checkOverdueTasks = async () => {
@@ -46,6 +47,71 @@ const checkOverdueTasks = async () => {
     }
 };
 
+const checkUpcomingTaskReminders = async () => {
+    try {
+        const now = new Date();
+        const in3Hours = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+        const in1Hour = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+
+        // Check for 3-hour reminders (due between 2h58m and 3h02m from now)
+        const in3HoursStart = new Date(now.getTime() + 3 * 60 * 60 * 1000 - 2 * 60 * 1000);
+        const in3HoursEnd = new Date(now.getTime() + 3 * 60 * 60 * 1000 + 2 * 60 * 1000);
+        const tasks3h = await Task.find({
+            completed: false,
+            reminder3hSent: false,
+            dueDate: { 
+                $gte: in3HoursStart, 
+                $lte: in3HoursEnd 
+            }
+        }).populate('user');
+
+        for (const task of tasks3h) {
+            const user = task.user;
+            if (user && user.pushSubscriptions && user.pushSubscriptions.length > 0) {
+                const payload = {
+                    title: 'Task Reminder',
+                    body: `Your task "${task.title}" is due in about 3 hours.`
+                };
+                for (const sub of user.pushSubscriptions) {
+                    await sendPushNotification(sub, payload);
+                }
+            }
+            task.reminder3hSent = true;
+            await task.save();
+        }
+
+        // Check for 1-hour reminders (due between 58m and 62m from now)
+        const in1HourStart = new Date(now.getTime() + 1 * 60 * 60 * 1000 - 2 * 60 * 1000);
+        const in1HourEnd = new Date(now.getTime() + 1 * 60 * 60 * 1000 + 2 * 60 * 1000);
+        const tasks1h = await Task.find({
+            completed: false,
+            reminder1hSent: false,
+            dueDate: { 
+                $gte: in1HourStart, 
+                $lte: in1HourEnd 
+            }
+        }).populate('user');
+
+        for (const task of tasks1h) {
+            const user = task.user;
+            if (user && user.pushSubscriptions && user.pushSubscriptions.length > 0) {
+                const payload = {
+                    title: 'Final Task Reminder',
+                    body: `Your task "${task.title}" is due in about 1 hour.`
+                };
+                for (const sub of user.pushSubscriptions) {
+                    await sendPushNotification(sub, payload);
+                }
+            }
+            task.reminder1hSent = true;
+            await task.save();
+        }
+
+    } catch (error) {
+        console.error('❌ Push Scheduler Error:', error.message);
+    }
+};
+
 /**
  * Starts the cron job.
  * Runs every day at 9:00 AM (0 9 * * *)
@@ -55,7 +121,15 @@ export const startScheduler = () => {
     // This runs daily at 9:00 AM local time
     cron.schedule('0 9 * * *', checkOverdueTasks, {
         scheduled: true,
-        timezone: "Asia/Kolkata" // Adjust to your preferred timezone for consistency
+        timezone: "Asia/Kolkata" 
     });
+    
+    // Check for push notifications every minute for precise timing
+    cron.schedule('* * * * *', checkUpcomingTaskReminders, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+    
     console.log('⏰ Overdue task scheduler initialized: Daily at 9:00 AM.');
+    console.log('⏰ Push notification reminder scheduler initialized: Every minute.');
 };
