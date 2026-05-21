@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import Materials from './pages/Materials';
-import Forum from './pages/Forum';
+import Chat from './pages/Chat';
 import Analytics from './pages/Analytics';
 import Navbar from './components/Navbar';
 import ThemeProvider from './theme/ThemeProvider';
@@ -16,7 +16,7 @@ import { useAuth } from './context/AuthContext';
 import { DashboardProvider } from './context/DashboardContext';
 import { MaterialsProvider } from './context/MaterialsContext'; 
 import { AnalyticsProvider } from './context/AnalyticsContext';
-import { ForumProvider } from './context/ForumContext';
+import { ChatProvider } from './context/ChatContext';
 import { TaskProvider } from './context/TaskContext';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import axios from 'axios'; 
@@ -103,10 +103,10 @@ export default function App() {
                   <Materials />
                 </MaterialsProvider>
               } />
-              <Route path="/forum" element={
-                <ForumProvider>
-                  <Forum />
-                </ForumProvider>
+              <Route path="/chat" element={
+                <ChatProvider>
+                  <Chat />
+                </ChatProvider>
               } />
               <Route path="/analytics" element={
                 <AnalyticsProvider>

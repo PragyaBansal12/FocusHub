@@ -100,10 +100,10 @@ export default function Dashboard() {
       darkRing: "dark:ring-emerald-500/20"
     },
     {
-      title: "Community Forum",
-      description: "Connect with other students",
+      title: "Community Chat",
+      description: "Chat with other students",
       icon: MessageSquare,
-      path: "/forum",
+      path: "/chat",
       color: "bg-purple-500",
       darkRing: "dark:ring-purple-500/20"
     },

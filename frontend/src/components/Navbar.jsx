@@ -37,7 +37,7 @@ export default function Navbar() {
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/tasks", label: "Tasks", icon: CheckSquare },
     { path: "/materials", label: "Materials", icon: BookOpen },
-    { path: "/forum", label: "Forum", icon: MessageSquare },
+    { path: "/chat", label: "Chat", icon: MessageSquare },
     { path: "/analytics", label: "Analytics", icon: TrendingUp },
   ];
 
