@@ -14,8 +14,8 @@ const initialFormData = {
 const formatDateForInput = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-    return date.toISOString().split('T')[0];
+    const pad = (n) => (n < 10 ? '0' + n : n);
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 export default function Tasks() {
@@ -51,7 +51,8 @@ export default function Tasks() {
             alert("✅ Google Calendar synced successfully!");
             window.history.replaceState(null, null, window.location.pathname);
         } else if (syncStatus === 'error') {
-            alert("❌ Failed to sync Google Calendar.");
+            const reason = urlParams.get('reason') || 'Unknown error';
+            alert(`❌ Failed to sync Google Calendar.\n\nReason: ${reason}\n\nCheck your backend terminal for full details.`);
             window.history.replaceState(null, null, window.location.pathname);
         }
         checkSyncStatus();
@@ -191,8 +192,8 @@ export default function Tasks() {
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Due Date</label>
-                                    <input type="date" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition text-slate-900 dark:text-white" value={formData.dueDate} onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })} />
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Due Date & Time</label>
+                                    <input type="datetime-local" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition text-slate-900 dark:text-white" value={formData.dueDate} onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Priority</label>
@@ -267,7 +268,7 @@ export default function Tasks() {
                                         <div className="flex flex-wrap items-center gap-3">
                                             {task.dueDate && (
                                                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                                                    <Calendar size={13} className="text-indigo-500" /> {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                    <Calendar size={13} className="text-indigo-500" /> {new Date(task.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                                                 </span>
                                             )}
                                             {isCalendarSynced && task.dueDate && task.googleEventId && !task.completed && (
