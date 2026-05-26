@@ -117,6 +117,18 @@ export async function createTask(req, res) {
             tags
         };
         
+        // Subscription check for Free tier (Max 10 active tasks)
+        const user = await User.findById(req.user.id);
+        const plan = user?.subscriptionPlan || 'free';
+        if (plan === 'free') {
+            const activeTasksCount = await Task.countDocuments({ user: req.user.id, completed: false });
+            if (activeTasksCount >= 10) {
+                return res.status(403).json({ 
+                    message: "Free tier limit reached. You can only have 10 active tasks. Please upgrade to Pro for unlimited tasks." 
+                });
+            }
+        }
+        
         if (dueDate && dueDate.trim() !== "") {
             taskData.dueDate = dueDate;
         }

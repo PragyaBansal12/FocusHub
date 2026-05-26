@@ -61,15 +61,26 @@ export const getCalendarClient = async (userId) => {
     return google.calendar({ version: 'v3', auth: client });
 };
 
-export const googleAuth = (req, res) => {
-    const client = getOAuth2Client();
-    const authUrl = client.generateAuthUrl({
-        access_type: 'offline', 
-        scope: SCOPES,
-        prompt: 'consent', 
-        state: req.user.id, 
-    });
-    res.json({ authUrl });
+export const googleAuth = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const plan = user?.subscriptionPlan || 'free';
+        if (plan === 'free') {
+            return res.status(403).json({ message: "Google Calendar sync is a premium feature. Please upgrade to Pro or Yearly." });
+        }
+
+        const client = getOAuth2Client();
+        const authUrl = client.generateAuthUrl({
+            access_type: 'offline', 
+            scope: SCOPES,
+            prompt: 'consent', 
+            state: req.user.id, 
+        });
+        res.json({ authUrl });
+    } catch (error) {
+        console.error("Error generating Google Auth URL:", error);
+        res.status(500).json({ message: "Failed to initialize Google Calendar sync." });
+    }
 };
 
 export const googleAuthCallback = async (req, res) => {

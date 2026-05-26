@@ -1,6 +1,7 @@
 // backend/controllers/MaterialController.js
 
 import Material from "../models/Material.js";
+import User from "../models/User.js";
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 
@@ -67,6 +68,22 @@ export async function uploadMaterial(req, res) {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const user = await User.findById(req.user.id);
+    const plan = user?.subscriptionPlan || 'free';
+    if (plan === 'free') {
+      const materialCount = await Material.countDocuments({ user: req.user.id });
+      if (materialCount >= 3) {
+        return res.status(403).json({ success: false, message: "Free tier limit reached. Maximum 3 materials allowed." });
+      }
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(403).json({ success: false, message: "File exceeds 5MB limit for free tier." });
+      }
+    } else {
+      if (req.file.size > 25 * 1024 * 1024) {
+        return res.status(403).json({ success: false, message: "File exceeds 25MB limit for premium tier." });
+      }
     }
 
     const uploadResult = await uploadFileToCloudinary(req.file);
@@ -232,5 +249,32 @@ export async function getMaterial(req, res) {
     res.json({ success: true, material });
   } catch (err) {
     res.status(500).json({ success: false });
+  }
+}
+
+/**
+ * @route   GET /api/materials/:id/preview
+ * Generates a signed Cloudinary URL to bypass strict PDF delivery restrictions.
+ */
+export async function getPreviewUrl(req, res) {
+  try {
+    const material = await Material.findOne({ _id: req.params.id, user: req.user.id });
+    if (!material) return res.status(404).json({ success: false, message: "Material not found" });
+
+    if (material.fileType === 'pdf') {
+      const signedUrl = cloudinary.url(material.publicId, {
+        resource_type: 'image',
+        type: 'upload',
+        format: 'pdf',
+        sign_url: true,
+        secure: true
+      });
+      return res.json({ success: true, url: signedUrl });
+    }
+    
+    return res.json({ success: true, url: material.fileUrl });
+  } catch (err) {
+    console.error("Preview URL Error:", err);
+    res.status(500).json({ success: false, message: "Failed to generate preview URL" });
   }
 }

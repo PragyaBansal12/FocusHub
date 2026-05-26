@@ -1,5 +1,6 @@
 import Task from "../models/Task.js";
 import Pomodoro from "../models/Pomodoro.js";
+import User from "../models/User.js";
 import mongoose from "mongoose";
 
 // ─────────────────────────────────────────────
@@ -30,7 +31,10 @@ export async function getFocusTime(req, res) {
     const userId = req.user?.id; // ✅ FIX: was req.userId (always undefined)
     if (!userId) return res.status(401).json({ message: "Unauthorised" });
 
-    const days = parsePositiveInt(req.query.days, 30, 365);
+    const user = await User.findById(userId);
+    const plan = user?.subscriptionPlan || 'free';
+    const maxDays = plan === 'free' ? 90 : 365;
+    const days = parsePositiveInt(req.query.days, 30, maxDays);
     const startDate = daysAgoMidnight(days);
 
     // ── Aggregation pipeline – group by date string, sum duration ──
@@ -146,7 +150,10 @@ export async function getPomodoroSessions(req, res) {
     const userId = req.user?.id; // ✅ FIX
     if (!userId) return res.status(401).json({ message: "Unauthorised" });
 
-    const days = parsePositiveInt(req.query.days, 7, 90);
+    const user = await User.findById(userId);
+    const plan = user?.subscriptionPlan || 'free';
+    const maxDays = plan === 'free' ? 90 : 365;
+    const days = parsePositiveInt(req.query.days, 7, maxDays);
     const startDate = daysAgoMidnight(days);
 
     // ── Single aggregation for day-of-week and hourly breakdowns ──
