@@ -7,6 +7,27 @@ import { sendOverdueAlertEmail } from './emailService.js';
 import { sendPushNotification } from './pushNotificationService.js';
 
 // The function that runs on the schedule
+const checkExpirations = async () => {
+    console.log('--- Running subscription expiration check ---');
+    try {
+        const expiredUsers = await User.find({
+            subscriptionPlan: { $ne: 'free' },
+            subscriptionExpiryDate: { $lt: new Date() }
+        });
+
+        for (const user of expiredUsers) {
+            console.log(`Downgrading user ${user.email} (Expired on ${user.subscriptionExpiryDate})`);
+            user.subscriptionPlan = 'free';
+            user.subscriptionStatus = 'inactive';
+            user.subscriptionExpiryDate = null;
+            await user.save();
+        }
+        console.log(`--- Expiration check complete. ${expiredUsers.length} user(s) downgraded. ---`);
+    } catch (error) {
+        console.error('❌ Expiration Scheduler Error:', error.message);
+    }
+};
+
 const checkOverdueTasks = async () => {
     console.log('--- Running overdue task check scheduler ---');
 
@@ -67,13 +88,16 @@ const checkUpcomingTaskReminders = async () => {
 
         for (const task of tasks3h) {
             const user = task.user;
-            if (user && user.pushSubscriptions && user.pushSubscriptions.length > 0) {
-                const payload = {
-                    title: 'Task Reminder',
-                    body: `Your task "${task.title}" is due in about 3 hours.`
-                };
-                for (const sub of user.pushSubscriptions) {
-                    await sendPushNotification(sub, payload);
+            // Only send 3-hour reminder to premium users
+            if (user && (user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'yearly')) {
+                if (user.pushSubscriptions && user.pushSubscriptions.length > 0) {
+                    const payload = {
+                        title: 'Task Reminder',
+                        body: `Your task "${task.title}" is due in about 3 hours.`
+                    };
+                    for (const sub of user.pushSubscriptions) {
+                        await sendPushNotification(sub, payload);
+                    }
                 }
             }
             task.reminder3hSent = true;
@@ -130,6 +154,13 @@ export const startScheduler = () => {
         timezone: "Asia/Kolkata"
     });
     
+    // Check for expired subscriptions daily at midnight
+    cron.schedule('0 0 * * *', checkExpirations, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+    
     console.log('⏰ Overdue task scheduler initialized: Daily at 9:00 AM.');
+    console.log('⏰ Subscription expiration scheduler initialized: Daily at Midnight.');
     console.log('⏰ Push notification reminder scheduler initialized: Every minute.');
 };

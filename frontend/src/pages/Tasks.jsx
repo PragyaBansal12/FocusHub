@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTasks } from "../context/TaskContext";
-import { Plus, Trash2, Check, Calendar, Tag, Link, Settings2, Edit3, Bell, ListChecks } from "lucide-react"; 
+import { Plus, Trash2, Check, Calendar, Tag, Link, Settings2, Edit3, Bell, ListChecks, Star } from "lucide-react"; 
 import axios from 'axios';
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const initialFormData = {
     title: "",
@@ -29,7 +31,11 @@ export default function Tasks() {
         deleteTask,
     } = useTasks();
 
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
     const [showForm, setShowForm] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [isCalendarSynced, setIsCalendarSynced] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [formData, setFormData] = useState(initialFormData);
@@ -59,6 +65,10 @@ export default function Tasks() {
     }, [checkSyncStatus]);
 
     async function handleCalendarSync() {
+        if (!user || user.subscriptionPlan === 'free' || !user.subscriptionPlan) {
+            setShowUpgradeModal(true);
+            return;
+        }
         try {
             const res = await axios.get("http://localhost:5000/api/calendar/google");
             if (res.status === 200) { window.location.href = res.data.authUrl; }
@@ -317,6 +327,30 @@ export default function Tasks() {
                     })
                 )}
             </div>
+
+            {/* Shiny Upgrade Modal */}
+            {showUpgradeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="w-full max-w-md bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl p-8 border border-indigo-500/30 text-center relative overflow-hidden">
+                        <div className="absolute top-[-50px] left-1/2 -translate-x-1/2 w-40 h-40 bg-indigo-500/20 blur-3xl rounded-full pointer-events-none"></div>
+                        <div className="relative z-10">
+                            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.5)] mb-6">
+                                <Calendar size={32} className="text-white" />
+                            </div>
+                            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3">Premium Feature</h2>
+                            <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                                Seamlessly sync your tasks with <strong className="text-indigo-500 dark:text-indigo-400">Google Calendar</strong>. This feature is exclusively available for FocusHub+ users!
+                            </p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowUpgradeModal(false)} className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+                                <button onClick={() => navigate('/subscription')} className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] hover:bg-right shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_25px_rgba(99,102,241,0.6)] transition-all duration-500 flex items-center justify-center gap-2">
+                                    <Star size={16} className="fill-current animate-pulse text-yellow-300" /> Upgrade
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -32,6 +32,19 @@ const userSchema = new mongoose.Schema(
       type: Array,
       default: [],
     },
+    subscriptionPlan: {
+      type: String,
+      enum: ['free', 'pro', 'yearly'],
+      default: 'free',
+    },
+    razorpaySubscriptionId: {
+      type: String,
+      default: null,
+    },
+    subscriptionStatus: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );
