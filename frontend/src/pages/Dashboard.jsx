@@ -35,7 +35,7 @@ export default function Dashboard() {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      const statsRes = await fetch("http://localhost:5000/api/pomodoro/stats", {
+      const statsRes = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/pomodoro/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -61,7 +61,7 @@ export default function Dashboard() {
   async function handleSessionComplete(sessionData) {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/pomodoro", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/pomodoro`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

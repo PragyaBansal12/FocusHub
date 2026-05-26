@@ -32,7 +32,7 @@ export default function ProfileModal({ isOpen, onClose }) {
     }
 
     try {
-      const response = await axios.put("http://localhost:5000/api/user/update", formData, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/user/update`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

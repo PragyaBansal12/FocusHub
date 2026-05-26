@@ -57,7 +57,7 @@ export function usePushNotifications() {
         }
 
         // Send subscription to backend
-        await axios.post('http://localhost:5000/api/notifications/subscribe', {
+        await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/notifications/subscribe`, {
           subscription
         });
         

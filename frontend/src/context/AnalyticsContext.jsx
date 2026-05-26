@@ -74,19 +74,19 @@ export function AnalyticsProvider({children}){
         pomodoroSessionsRes,
         materialsStatsRes
       ] = await Promise.all([
-        fetch('http://localhost:5000/api/analytics/focus-time?days=30', {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/analytics/focus-time?days=30`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch('http://localhost:5000/api/analytics/tasks', {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/analytics/tasks`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch('http://localhost:5000/api/pomodoro/stats', {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/pomodoro/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch('http://localhost:5000/api/analytics/pomodoro-sessions?days=7', {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/analytics/pomodoro-sessions?days=7`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch('http://localhost:5000/api/materials/stats', {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/materials/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);

@@ -85,7 +85,7 @@ export const googleAuth = async (req, res) => {
 
 export const googleAuthCallback = async (req, res) => {
     const { code, state: userId } = req.query;
-    const FRONTEND_URL = "http://localhost:5173"; 
+    const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173"; 
 
     try {
         const client = getOAuth2Client();

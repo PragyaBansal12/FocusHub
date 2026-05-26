@@ -43,7 +43,7 @@ export default function Tasks() {
 
     const checkSyncStatus = useCallback(async () => {
         try {
-            const res = await axios.get("http://localhost:5000/api/calendar/status");
+            const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/calendar/status`);
             setIsCalendarSynced(res.data.isSynced);
         } catch (error) {
             console.error("Failed to check calendar sync status:", error);
@@ -70,7 +70,7 @@ export default function Tasks() {
             return;
         }
         try {
-            const res = await axios.get("http://localhost:5000/api/calendar/google");
+            const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/calendar/google`);
             if (res.status === 200) { window.location.href = res.data.authUrl; }
         } catch (error) { console.error("Error sync initiation:", error); }
     }
@@ -78,7 +78,7 @@ export default function Tasks() {
     async function handleCalendarDisconnect() {
         if (!window.confirm("Disconnect Google Calendar?")) return;
         try {
-            const res = await axios.post("http://localhost:5000/api/calendar/disconnect");
+            const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/calendar/disconnect`);
             if (res.status === 200) { setIsCalendarSynced(false); checkSyncStatus(); }
         } catch (error) { console.error("Error disconnect:", error); }
     }
@@ -87,7 +87,7 @@ export default function Tasks() {
         if (alertUpdatingTaskId) return;
         setAlertUpdatingTaskId(taskId); 
         try {
-            const response = await axios.patch(`http://localhost:5000/api/tasks/${taskId}/toggle-alert`, {}, { withCredentials: true });
+            const response = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${taskId}/toggle-alert`, {}, { withCredentials: true });
             if (response.status === 200) { if (fetchTasks) await fetchTasks(); }
         } catch (error) { console.error("Error toggling email reminder:", error);
         } finally { setAlertUpdatingTaskId(null); }

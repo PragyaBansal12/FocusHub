@@ -83,6 +83,6 @@ export function validateFile(file) {
 // The function below is removed because the frontend now uses the direct Cloudinary URL (material.fileUrl).
 /*
 export function getFilePreviewUrl(fileName) {
- return `http://localhost:5000/uploads/${fileName}`;
+ return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${fileName}`;
 }
 */

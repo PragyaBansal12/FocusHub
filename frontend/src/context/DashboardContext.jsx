@@ -193,7 +193,7 @@ export function DashboardProvider({ children, onSessionComplete }) {
     const fetchTasks = useCallback(async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch("http://localhost:5000/api/tasks", {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
@@ -212,7 +212,7 @@ export function DashboardProvider({ children, onSessionComplete }) {
     const completeTask = useCallback(async (taskId) => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/complete`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${taskId}/complete`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` }
             });

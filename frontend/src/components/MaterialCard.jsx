@@ -64,7 +64,7 @@ export default function MaterialCard({ material }) {
     } else if (material.fileType === 'pdf') {
       setLoadingPreview(true);
       try {
-        const res = await axios.get(`http://localhost:5000/api/materials/${material._id}/preview`, { withCredentials: true });
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/materials/${material._id}/preview`, { withCredentials: true });
         setPreviewUrl(res.data.url);
         setShowPreview(true);
       } catch (err) {

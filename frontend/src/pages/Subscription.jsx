@@ -88,7 +88,7 @@ export default function Subscription() {
             }
 
             // 1. Create Order on Backend
-            const { data } = await axios.post('http://localhost:5000/api/subscription/create', {
+            const { data } = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/subscription/create`, {
                 planType: plan.id
             });
 
@@ -109,7 +109,7 @@ export default function Subscription() {
                 handler: async function (response) {
                     try {
                         // 3. Verify Payment
-                        const verifyRes = await axios.post('http://localhost:5000/api/subscription/verify', {
+                        const verifyRes = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/subscription/verify`, {
                             ...response,
                             planType: plan.id
                         });

@@ -66,7 +66,7 @@ export default function App() {
   async function handleSessionComplete(sessionData) {
     console.log("🍅 Pomodoro session completed:", sessionData);
     try {
-      const res = await axios.post("http://localhost:5000/api/pomodoro", sessionData);
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/pomodoro`, sessionData);
       if (res.status === 200) {
         console.log("✅ Session saved to database");
       }

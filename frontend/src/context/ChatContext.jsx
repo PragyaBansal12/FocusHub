@@ -40,7 +40,7 @@ export function ChatProvider({ children }) {
     const fetchStudents = useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/auth/students', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/students`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
@@ -55,7 +55,7 @@ export function ChatProvider({ children }) {
     const fetchChatHistory = useCallback(async (otherUserId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:5000/api/messages/history/${otherUserId}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/messages/history/${otherUserId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
@@ -70,7 +70,7 @@ export function ChatProvider({ children }) {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/community/messages', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/community/messages`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
@@ -89,7 +89,7 @@ export function ChatProvider({ children }) {
             return;
         }
 
-        socketRef.current = io('http://localhost:5000', { auth: { token } });
+        socketRef.current = io(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}`, { auth: { token } });
         const socket = socketRef.current;
 
         socket.on('connect', () => {

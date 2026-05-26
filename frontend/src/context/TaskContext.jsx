@@ -21,7 +21,7 @@ export const TaskProvider = ({ children }) => {
             // 🔥 REMOVED: const token = localStorage.getItem("token");
             
             // Use axios.get: automatically sends secure cookie
-            const res = await axios.get("http://localhost:5000/api/tasks");
+            const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks`);
             
             // Axios response data is at res.data
             setTasks(res.data.tasks); 
@@ -50,7 +50,7 @@ export const TaskProvider = ({ children }) => {
             };
             
             // Use axios.post: automatically sends secure cookie
-            const res = await axios.post("http://localhost:5000/api/tasks", taskData);
+            const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks`, taskData);
 
             // Axios response data is at res.data
             const resultTask = res.data.task; 
@@ -73,7 +73,7 @@ export const TaskProvider = ({ children }) => {
                 tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
             };
             
-            const res = await axios.put(`http://localhost:5000/api/tasks/${id}`, taskData);
+            const res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}`, taskData);
             const updatedTask = res.data.task; 
             
             setTasks(prevTasks => prevTasks.map(task => 
@@ -93,7 +93,7 @@ export const TaskProvider = ({ children }) => {
     // ✅ toggleTask (This was already converted correctly in the previous step)
     const toggleTask = async (id) => {
         try {
-            const res = await axios.patch(`http://localhost:5000/api/tasks/${id}/toggle`);
+            const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle`);
 
             const toggledTask = res.data.task; 
             
@@ -123,7 +123,7 @@ export const TaskProvider = ({ children }) => {
             // 🔥 REMOVED: const token = localStorage.getItem("token");
             
             // Use axios.delete: automatically sends secure cookie
-            const res = await axios.delete(`http://localhost:5000/api/tasks/${id}`);
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}`);
 
             // Remove from local state only if the request was successful
             if (res.status === 200 || res.status === 204) {
@@ -141,7 +141,7 @@ export const TaskProvider = ({ children }) => {
     const toggleEmailReminder = async (id) => {
     try {
         // This hits the backend route we set up
-        const res = await axios.patch(`http://localhost:5000/api/tasks/${id}/toggle-alert`);
+        const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle-alert`);
         
         const updatedTask = res.data.task;
         

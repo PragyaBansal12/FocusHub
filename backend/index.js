@@ -31,7 +31,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
-const FRONTEND_URL = "http://localhost:5173"; // Define frontend URL for clarity
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173"; // Define frontend URL for clarity
 
 // ===============================================
 // 🔥 CRITICAL FIXES FOR COOKIE/AUTH/REDIRECT ISSUES
