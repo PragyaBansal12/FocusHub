@@ -9,7 +9,8 @@ import {
   CheckSquare, 
   BookOpen, 
   MessageSquare, 
-  TrendingUp 
+  TrendingUp,
+  Star
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ProfileModal from "./ProfileModal";
@@ -80,6 +81,27 @@ export default function Navbar() {
           )}
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Subscription Button/Badge */}
+            {user && (
+              (user.subscriptionPlan === 'free' || !user.subscriptionPlan) ? (
+                <button 
+                  onClick={() => navigate('/subscription')}
+                  className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] hover:bg-right transition-all duration-500 text-white text-xs font-extrabold shadow-[0_0_15px_rgba(99,102,241,0.5)] border border-indigo-300/30"
+                >
+                  <Star size={14} className="fill-current animate-pulse text-yellow-300" />
+                  UPGRADE TO PRO
+                </button>
+              ) : (
+                <button 
+                  onClick={() => navigate('/subscription')}
+                  className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 bg-[length:200%_auto] hover:bg-right transition-all duration-500 text-amber-900 text-xs font-extrabold uppercase tracking-widest shadow-[0_0_15px_rgba(251,191,36,0.6)] border border-yellow-100"
+                >
+                  <Star size={14} className="fill-current text-amber-700" />
+                  {user.subscriptionPlan}
+                </button>
+              )
+            )}
+
             {/* Theme Toggle */}
             <button
               onClick={toggle}

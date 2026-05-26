@@ -10,6 +10,7 @@ import ThemeProvider from './theme/ThemeProvider';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Subscription from './pages/Subscription';
 import ProtectedRoute from './components/ProtectedRoute';
 import FloatingTimer from './components/FloatingTimer';
 import { useAuth } from './context/AuthContext';
@@ -113,6 +114,7 @@ export default function App() {
                   <Analytics />
                 </AnalyticsProvider>
               } />
+              <Route path="/subscription" element={<Subscription />} />
             </Route>
           </Routes>
         </main>

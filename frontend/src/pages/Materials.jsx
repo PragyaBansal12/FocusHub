@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, X, FolderOpen, HardDrive, Hash } from 'lucide-react';
+import { Plus, Search, Filter, X, FolderOpen, HardDrive, Hash, Star } from 'lucide-react';
 import { useMaterials } from '../context/MaterialsContext';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import MaterialCard from '../components/MaterialCard';
 
@@ -18,8 +20,15 @@ export default function Materials() {
     clearFilters
   } = useMaterials();
 
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Dynamic max storage based on plan
+  const plan = user?.subscriptionPlan || 'free';
+  const maxStorageMB = plan === 'free' ? 15 : 1000;
 
   const fileTypes = [
     { value: '', label: 'All Types' },
@@ -60,15 +69,25 @@ export default function Materials() {
               <HardDrive size={16} className="text-accent" />
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Cloud Storage</span>
             </div>
-            <span className="text-xs font-mono text-slate-500">
-              {stats.totalSizeMB} MB <span className="text-slate-300">/</span> 1000 MB
-            </span>
+            <div className="flex items-center gap-3">
+              {plan === 'free' && (
+                <button 
+                  onClick={() => navigate('/subscription')}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:bg-indigo-500/20 transition-colors animate-pulse"
+                >
+                  <Star size={10} className="fill-current text-yellow-500" /> Unlock 1000 MB
+                </button>
+              )}
+              <span className="text-xs font-mono text-slate-500">
+                {stats.totalSizeMB} MB <span className="text-slate-300">/</span> {maxStorageMB} MB
+              </span>
+            </div>
           </div>
           
           <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
             <div 
               className="bg-gradient-to-r from-accent to-indigo-500 h-full rounded-full transition-all duration-1000 ease-out"
-              style={{ width: `${Math.min((parseFloat(stats.totalSizeMB) / 1000) * 100, 100)}%` }}
+              style={{ width: `${Math.min((parseFloat(stats.totalSizeMB) / maxStorageMB) * 100, 100)}%` }}
             />
           </div>
           

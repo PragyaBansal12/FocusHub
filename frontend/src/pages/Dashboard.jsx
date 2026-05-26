@@ -4,7 +4,7 @@ import PomodoroTimer from "../components/PomodoroTimer";
 import { CheckSquare, BookOpen, MessageSquare, TrendingUp, ArrowRight, LayoutDashboard } from "lucide-react";
 
 // 🔥 NEW IMPORT: Get the Task Context
-import { useTasks } from "../context/TaskContext"; 
+import { useTasks } from "../context/TaskContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -29,16 +29,16 @@ export default function Dashboard() {
   // ============================================
   // FETCH DASHBOARD DATA (Only Pomodoro Stats)
   // ============================================
-  
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      
+
       const statsRes = await fetch("http://localhost:5000/api/pomodoro/stats", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setPomodoroStats(statsData);
@@ -48,7 +48,7 @@ export default function Dashboard() {
       console.error("Error fetching dashboard data:", error);
       setLoading(false);
     }
-  }, []); 
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -57,7 +57,7 @@ export default function Dashboard() {
   // ============================================
   // HANDLE POMODORO SESSION COMPLETION
   // ============================================
-  
+
   async function handleSessionComplete(sessionData) {
     try {
       const token = localStorage.getItem("token");
@@ -81,7 +81,7 @@ export default function Dashboard() {
   // ============================================
   // QUICK LINKS CONFIGURATION
   // ============================================
-  
+
   const quickLinks = [
     {
       title: "Manage Tasks",
@@ -135,7 +135,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* Welcome Card - Brighter Dark Mode */}
           <div className="rounded-2xl p-6 bg-white dark:bg-[#1E293B] shadow-md border border-transparent dark:border-slate-700/50">
             <h2 className="text-2xl font-semibold mb-2 text-slate-900 dark:text-white">Welcome back! 👋</h2>
@@ -180,7 +180,7 @@ export default function Dashboard() {
                 View all →
               </button>
             </div>
-            
+
             {dashboardLoading ? (
               <div className="text-sm text-gray-500 animate-pulse">Loading...</div>
             ) : todayTasks.length === 0 ? (
@@ -216,13 +216,13 @@ export default function Dashboard() {
           <div className="rounded-2xl p-1 bg-white dark:bg-[#1E293B] shadow-md border border-transparent dark:border-slate-700/50">
             <PomodoroTimer onSessionComplete={handleSessionComplete} />
           </div>
-          
+
           <div className="rounded-2xl p-6 bg-white dark:bg-[#1E293B] shadow-md border border-transparent dark:border-slate-700/50">
             <h4 className="font-semibold mb-4 text-slate-900 dark:text-white">Quick Stats</h4>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-slate-400">Tasks Today</span>
-                <span className="font-bold text-slate-900 dark:text-white">{todayTasks.length}</span> 
+                <span className="font-bold text-slate-900 dark:text-white">{todayTasks.length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-slate-400">Focus Time</span>

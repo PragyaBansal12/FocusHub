@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download, Trash2, Eye, Calendar, Tag as TagIcon } from 'lucide-react';
 import { formatFileSize, getFileIcon, getFileColor } from '../utils/fileHelpers';
 import { useMaterials } from '../context/MaterialsContext';
+import axios from 'axios';
 
 /**
  * Handles Cloudinary URLs specifically to avoid 401 Unauthorized errors.
@@ -22,14 +23,8 @@ function getCloudinaryPreviewUrl(material, isThumbnail = false) {
       // CARD VIEW: Return a JPG of page 1
       return url.replace(/\.pdf$/i, '.jpg');
     } else {
-      /**
-       * 🛑 THE FIX:
-       * Browsers block iframes if they think tracking is involved.
-       * Adding 'dn_true' (client-side hint) or simply stripping 
-       * transformations often bypasses strict tracking prevention.
-       */
-      return url.replace(/\.pdf$/i, '');    
-  }
+      return url;
+    }
   }
 
   return material.fileUrl;
@@ -38,6 +33,8 @@ function getCloudinaryPreviewUrl(material, isThumbnail = false) {
 export default function MaterialCard({ material }) {
   const { deleteMaterial, downloadMaterial } = useMaterials();
   const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // ============================================
@@ -60,9 +57,21 @@ export default function MaterialCard({ material }) {
     await downloadMaterial(material._id, material.originalName);
   }
 
-  function handlePreview() {
-    if (material.fileType === 'image' || material.fileType === 'pdf') {
+  async function handlePreview() {
+    if (material.fileType === 'image') {
+      setPreviewUrl(getCloudinaryPreviewUrl(material, false));
       setShowPreview(true);
+    } else if (material.fileType === 'pdf') {
+      setLoadingPreview(true);
+      try {
+        const res = await axios.get(`http://localhost:5000/api/materials/${material._id}/preview`, { withCredentials: true });
+        setPreviewUrl(res.data.url);
+        setShowPreview(true);
+      } catch (err) {
+        console.error("Preview failed:", err);
+        alert("Failed to load PDF preview. Cloudinary might be blocking access.");
+      }
+      setLoadingPreview(false);
     }
   }
 
@@ -103,10 +112,15 @@ export default function MaterialCard({ material }) {
                   e.stopPropagation();
                   handlePreview();
                 }}
-                className="p-3 bg-white rounded-full hover:bg-gray-100 transition shadow-lg"
+                disabled={loadingPreview}
+                className="p-3 bg-white rounded-full hover:bg-gray-100 transition shadow-lg disabled:opacity-50"
                 title="Preview"
               >
-                <span className="text-gray-900"><Eye size={20} /></span>
+                {loadingPreview ? (
+                   <span className="text-gray-900"><div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></span>
+                ) : (
+                   <span className="text-gray-900"><Eye size={20} /></span>
+                )}
               </button>
             )}
             <button
@@ -204,13 +218,13 @@ export default function MaterialCard({ material }) {
             <div className="bg-white rounded-lg overflow-hidden h-[80vh]">
               {material.fileType === 'image' ? (
                 <img
-                  src={getCloudinaryPreviewUrl(material, false)}
+                  src={previewUrl}
                   alt={material.title}
                   className="w-full h-full object-contain mx-auto"
                 />
               ) : material.fileType === 'pdf' ? (
                 <iframe
-                  src={getCloudinaryPreviewUrl(material, false)}
+                  src={previewUrl}
                   className="w-full h-full border-none"
                   title={material.title}
                 />

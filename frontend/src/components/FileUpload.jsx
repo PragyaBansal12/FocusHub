@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, File, CheckCircle } from 'lucide-react';
+import { Upload, X, File, CheckCircle, Star } from 'lucide-react';
 import { validateFile, formatFileSize, getFileIcon } from '../utils/fileHelpers';
 import { useMaterials } from '../context/MaterialsContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function FileUpload({ onClose }) {
   const { uploadMaterial, uploading } = useMaterials();
+  const navigate = useNavigate();
   
   // ============================================
   // STATE
@@ -192,11 +194,35 @@ export default function FileUpload({ onClose }) {
           </div>
         )}
 
-        {/* Error Message */}
-        {error && (
+        {/* Standard Error Message */}
+        {error && !error.toLowerCase().includes('tier') && (
           <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg">
             {error}
           </div>
+        )}
+
+        {/* Shiny Premium Upgrade Modal */}
+        {error && error.toLowerCase().includes('tier') && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="w-full max-w-md bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl p-8 border border-indigo-500/30 text-center relative overflow-hidden">
+                    <div className="absolute top-[-50px] left-1/2 -translate-x-1/2 w-40 h-40 bg-indigo-500/20 blur-3xl rounded-full pointer-events-none"></div>
+                    <div className="relative z-10">
+                        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.5)] mb-6">
+                            <Star size={32} className="text-white fill-current" />
+                        </div>
+                        <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3">Storage Limit Reached</h2>
+                        <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                            You've hit the storage limits for the Free tier. Upgrade to <strong className="text-indigo-500 dark:text-indigo-400">FocusHub+</strong> to unlock unlimited uploads up to 25MB per file!
+                        </p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setError('')} className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Go Back</button>
+                            <button onClick={() => { onClose(); navigate('/subscription'); }} className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] hover:bg-right shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_25px_rgba(99,102,241,0.6)] transition-all duration-500 flex items-center justify-center gap-2">
+                                <Star size={16} className="fill-current animate-pulse text-yellow-300" /> Upgrade
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         )}
 
         {/* File Drop Zone */}
