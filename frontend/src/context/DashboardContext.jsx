@@ -58,6 +58,21 @@ export function DashboardProvider({ children, onSessionComplete }) {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const playNotificationSound = () => {
+        try {
+            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+            audio.play().catch(e => console.log("Audio play blocked by browser:", e));
+        } catch (error) {
+            console.log("Could not play sound:", error);
+        }
+    };
+
+    const showBrowserNotification = (title, body) => {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { body });
+        }
+    };
+
     const handleTimerComplete = useCallback(() => {
         if (isHandlingCompletion.current) return;
         isHandlingCompletion.current = true;
@@ -137,6 +152,10 @@ export function DashboardProvider({ children, onSessionComplete }) {
             localStorage.setItem("pomodoroTimeLeft", timeLeft.toString());
         } else {
             // Start
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+            
             setIsRunning(true);
             const target = Date.now() + (timeLeft * 1000);
             targetEndTimeRef.current = target;

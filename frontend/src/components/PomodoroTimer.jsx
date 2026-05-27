@@ -38,14 +38,6 @@ export default function PomodoroTimer() {
         setTempBreakTime(breakTime);
     }, [focusTime, breakTime]);
 
-    // 2. Sound effect logic: Triggered when the central timer state hits 0 and stops
-    useEffect(() => {
-        // If the time is 0 and the timer is no longer running, a session has completed.
-        if (timeLeft === 0 && !isRunning) {
-            playNotificationSound();
-        }
-    }, [timeLeft, isRunning]);
-
 
     // ============================================
     // SETTINGS MANAGEMENT
@@ -72,18 +64,6 @@ export default function PomodoroTimer() {
     // ============================================
     // HELPER FUNCTIONS
     // ============================================
-    
-    function playNotificationSound() {
-        try {
-            if (audioRef.current) {
-                // Rewind the sound before playing to ensure it plays every time
-                audioRef.current.currentTime = 0;
-                audioRef.current.play();
-            }
-        } catch (error) {
-            console.log("Could not play sound:", error);
-        }
-    }
 
     // This helper is kept as it calculates the progress based on context values
     function getProgress() {
@@ -98,13 +78,6 @@ export default function PomodoroTimer() {
 
     return (
         <div className="bg-white dark:bg-[#121318] rounded-2xl p-6 shadow-md relative">
-            {/* Hidden audio element */}
-            <audio
-                ref={audioRef}
-                src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"
-                preload="auto"
-            />
-
             {/* Header with Settings Button */}
             <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-lg">Focus Timer</h3>
