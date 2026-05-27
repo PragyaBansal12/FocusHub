@@ -60,8 +60,23 @@ export function DashboardProvider({ children, onSessionComplete }) {
 
     const playNotificationSound = () => {
         try {
-            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-            audio.play().catch(e => console.log("Audio play blocked by browser:", e));
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // High pitch beep
+            
+            gainNode.gain.setValueAtTime(1, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+            
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 1);
         } catch (error) {
             console.log("Could not play sound:", error);
         }
