@@ -16,6 +16,19 @@ export const useDashboard = () => {
 const getStoredTime = (key, defaultValue) => 
     parseInt(localStorage.getItem(key) || defaultValue);
 
+// Global audio context initialized safely
+let globalAudioCtx = null;
+const getAudioContext = () => {
+    if (!globalAudioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) globalAudioCtx = new AudioContext();
+    }
+    if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+        globalAudioCtx.resume();
+    }
+    return globalAudioCtx;
+};
+
 // 3. Provider Component
 export function DashboardProvider({ children, onSessionComplete }) {
     // ============================================
@@ -60,9 +73,8 @@ export function DashboardProvider({ children, onSessionComplete }) {
 
     const playNotificationSound = () => {
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
+            const ctx = getAudioContext();
+            if (!ctx) return;
             const osc = ctx.createOscillator();
             const gainNode = ctx.createGain();
             
@@ -159,6 +171,9 @@ export function DashboardProvider({ children, onSessionComplete }) {
 
     // --- Control Functions ---
     const toggleTimer = () => {
+        // Guarantee audio context is unlocked during user click!
+        getAudioContext();
+
         if (isRunning) {
             // Pause
             setIsRunning(false);
