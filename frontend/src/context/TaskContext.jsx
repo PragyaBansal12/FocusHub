@@ -40,25 +40,35 @@ export const TaskProvider = ({ children }) => {
     
     // 🔴 FIX 2: createTask converted to axios.post
     const createTask = async (formData) => {
+        // Optimistic UI Update
+        const tempId = "temp-" + Date.now();
+        const tempTask = {
+            _id: tempId,
+            ...formData,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
+        };
+        
+        // Instantly add to UI
+        setTasks(prev => [...prev, tempTask]);
+
         try {
-            // 🔥 REMOVED: const token = localStorage.getItem("token");
-            
             const taskData = {
                 ...formData,
-                // Ensure tags array is correctly formatted before sending
                 tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
             };
             
             // Use axios.post: automatically sends secure cookie
             const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks`, taskData);
 
-            // Axios response data is at res.data
+            // Replace temp task with real task from server
             const resultTask = res.data.task; 
-            
-            // Add the task returned by the server
-            setTasks(prev => [...prev, resultTask]); 
+            setTasks(prev => prev.map(t => t._id === tempId ? resultTask : t)); 
             return resultTask; 
         } catch (error) {
+            // Revert on failure
+            setTasks(prev => prev.filter(t => t._id !== tempId));
             console.error("Error creating task:", error);
             throw error;
         }
@@ -67,6 +77,18 @@ export const TaskProvider = ({ children }) => {
     
     // ✅ updateTask (This was already converted correctly in the previous step)
     const updateTask = async (id, formData) => {
+        const previousTask = tasks.find(t => t._id === id);
+        
+        // Optimistic UI Update
+        const tempTask = {
+            ...previousTask,
+            ...formData,
+            tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean)
+        };
+        setTasks(prevTasks => prevTasks.map(task => 
+            task._id === id ? tempTask : task
+        ));
+
         try {
             const taskData = {
                 ...formData,
@@ -76,12 +98,18 @@ export const TaskProvider = ({ children }) => {
             const res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}`, taskData);
             const updatedTask = res.data.task; 
             
+            // Sync completely with server response
             setTasks(prevTasks => prevTasks.map(task => 
                 task._id === id ? updatedTask : task
             ));
             
             return updatedTask;
         } catch (error) {
+            // Revert optimistic update on failure
+            setTasks(prevTasks => prevTasks.map(task => 
+                task._id === id ? previousTask : task
+            ));
+            
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
                 console.error("❌ Authentication Failed: Task update rejected by server.", error);
             }
@@ -132,43 +160,59 @@ export const TaskProvider = ({ children }) => {
     const deleteTask = async (id) => {
         if (!window.confirm("Are you sure you want to delete this task?")) return;
 
+        const previousTask = tasks.find(t => t._id === id);
+        
+        // Optimistic UI Delete
+        setTasks(prevTasks => prevTasks.filter(task => task._id !== id));
+
         try {
-            // 🔥 REMOVED: const token = localStorage.getItem("token");
-            
             // Use axios.delete: automatically sends secure cookie
             const res = await axios.delete(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}`);
 
-            // Remove from local state only if the request was successful
-            if (res.status === 200 || res.status === 204) {
-                setTasks(prevTasks => prevTasks.filter(task => task._id !== id));
-            } else {
+            if (res.status !== 200 && res.status !== 204) {
                  throw new Error("Server failed to delete task.");
             }
             
         } catch (error) {
+            // Revert UI on failure
+            if (previousTask) {
+                setTasks(prevTasks => [...prevTasks, previousTask]);
+            }
             console.error("Error deleting task:", error);
             throw error;
         }
     };
 
     const toggleEmailReminder = async (id) => {
-    try {
-        // This hits the backend route we set up
-        const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle-alert`);
+        const previousTask = tasks.find(t => t._id === id);
+        if (!previousTask) return;
         
-        const updatedTask = res.data.task;
-        
-        // Update the list locally so the bell turns yellow immediately
+        // Optimistic UI update
         setTasks(prevTasks => prevTasks.map(task => 
-            task._id === id ? updatedTask : task
+            task._id === id ? { ...task, emailAlerts: !task.emailAlerts } : task
         ));
-        
-        return updatedTask;
-    } catch (error) {
-        console.error("Error toggling email reminder:", error);
-        throw error;
-    }
-};
+
+        try {
+            // This hits the backend route we set up
+            const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle-alert`);
+            
+            const updatedTask = res.data.task;
+            
+            // Sync with server completely
+            setTasks(prevTasks => prevTasks.map(task => 
+                task._id === id ? updatedTask : task
+            ));
+            
+            return updatedTask;
+        } catch (error) {
+            // Revert on failure
+            setTasks(prevTasks => prevTasks.map(task => 
+                task._id === id ? previousTask : task
+            ));
+            console.error("Error toggling email reminder:", error);
+            throw error;
+        }
+    };
 
     // ============================================
     // DERIVED STATE / HELPER FUNCTIONS

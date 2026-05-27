@@ -94,8 +94,24 @@ export function MaterialsProvider({ children }) {
    * Upload a new material
    */
   const uploadMaterial = useCallback(async (file, metadata) => {
+    // 1. Optimistic UI update for immediate feedback
+    const tempId = "temp-" + Date.now();
+    const tempMaterial = {
+        _id: tempId,
+        title: metadata.title || file.name,
+        description: metadata.description || '',
+        subject: metadata.subject || '',
+        tags: metadata.tags || [],
+        type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type === 'application/pdf' ? 'pdf' : 'document',
+        fileUrl: '', // Not downloadable yet
+        createdAt: new Date().toISOString(),
+        isOptimistic: true // Optional flag if the UI wants to show a spinner on this specific card
+    };
+
+    setMaterials(prev => [tempMaterial, ...prev]);
+    setUploading(true);
+
     try {
-      setUploading(true);
       const token = localStorage.getItem('token');
       
       const formData = new FormData();
@@ -109,7 +125,6 @@ export function MaterialsProvider({ children }) {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
-          // Browser sets Content-Type for FormData automatically
         },
         body: formData
       });
@@ -117,23 +132,36 @@ export function MaterialsProvider({ children }) {
       const data = await res.json();
       
       if (res.ok) {
-        await fetchMaterials();
-        await fetchStats();
-        return { success: true, material: data.material };
+        const newMaterial = data.material;
+        // Replace temp material with real material from server
+        setMaterials(prev => prev.map(m => m._id === tempId ? newMaterial : m));
+        // Fetch stats in background
+        fetchStats();
+        return { success: true, material: newMaterial };
       } else {
+        // Revert on failure
+        setMaterials(prev => prev.filter(m => m._id !== tempId));
         return { success: false, error: data.message };
       }
     } catch (error) {
+      // Revert on failure
+      setMaterials(prev => prev.filter(m => m._id !== tempId));
       return { success: false, error: error.message };
     } finally {
       setUploading(false);
     }
-  }, [fetchMaterials, fetchStats]);
+  }, [fetchStats]);
 
   /**
    * Delete a material
    */
   const deleteMaterial = useCallback(async (id) => {
+    // Save previous state for reverting
+    const previousMaterial = materials.find(m => m._id === id);
+    
+    // Optimistic UI update
+    setMaterials(prev => prev.filter(m => m._id !== id));
+
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/materials/${id}`, {
@@ -142,17 +170,21 @@ export function MaterialsProvider({ children }) {
       });
       
       if (res.ok) {
-        setMaterials(prev => prev.filter(m => m._id !== id));
-        await fetchStats();
+        // Fetch stats in background
+        fetchStats();
         return { success: true };
       } else {
+        // Revert on failure
+        if (previousMaterial) setMaterials(prev => [...prev, previousMaterial]);
         const data = await res.json();
         return { success: false, error: data.message };
       }
     } catch (error) {
+      // Revert on failure
+      if (previousMaterial) setMaterials(prev => [...prev, previousMaterial]);
       return { success: false, error: error.message };
     }
-  }, [fetchStats]);
+  }, [materials, fetchStats]);
 
   /**
    * Download a material
