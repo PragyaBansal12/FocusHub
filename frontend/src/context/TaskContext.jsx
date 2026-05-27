@@ -90,22 +90,35 @@ export const TaskProvider = ({ children }) => {
         }
     };
 
-    // ✅ toggleTask (This was already converted correctly in the previous step)
+    // ✅ toggleTask (Optimistic UI Update for zero latency)
     const toggleTask = async (id) => {
-        try {
-            const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle`);
+        // 1. Save previous state for reverting on error
+        const previousTask = tasks.find(t => t._id === id);
+        if (!previousTask) return;
 
-            const toggledTask = res.data.task; 
+        // 2. Optimistically update local UI immediately
+        setTasks(prevTasks => prevTasks.map(task => 
+            task._id === id ? { ...task, completed: !task.completed } : task
+        ));
+
+        try {
+            // 3. Make background request
+            const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle`);
             
+            // 4. Sync fully with server (picks up updated timestamps)
             setTasks(prevTasks => prevTasks.map(task => 
-                task._id === id ? toggledTask : task
+                task._id === id ? res.data.task : task
             ));
             
         } catch (error) {
+            // 5. Revert optimistic update on failure
+            setTasks(prevTasks => prevTasks.map(task => 
+                task._id === id ? previousTask : task
+            ));
+            
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
                 console.error("❌ Authentication Failed: Task toggle rejected by server.");
             }
-            
             if (error.message === 'Failed to fetch') {
                  console.error("⚠️ Network Error: Server likely offline or URL is wrong.");
             }
