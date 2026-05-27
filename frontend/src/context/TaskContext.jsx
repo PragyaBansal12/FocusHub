@@ -37,14 +37,16 @@ export const TaskProvider = ({ children }) => {
         fetchTasks();
     }, [fetchTasks]);
 
-    
     // 🔴 FIX 2: createTask converted to axios.post
     const createTask = async (formData) => {
+        const finalDueDate = formData.dueDate ? new Date(formData.dueDate).toISOString() : null;
+
         // Optimistic UI Update
         const tempId = "temp-" + Date.now();
         const tempTask = {
             _id: tempId,
             ...formData,
+            dueDate: finalDueDate,
             completed: false,
             createdAt: new Date().toISOString(),
             tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
@@ -56,6 +58,7 @@ export const TaskProvider = ({ children }) => {
         try {
             const taskData = {
                 ...formData,
+                dueDate: finalDueDate,
                 tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
             };
             
@@ -78,11 +81,13 @@ export const TaskProvider = ({ children }) => {
     // ✅ updateTask (This was already converted correctly in the previous step)
     const updateTask = async (id, formData) => {
         const previousTask = tasks.find(t => t._id === id);
+        const finalDueDate = formData.dueDate ? new Date(formData.dueDate).toISOString() : null;
         
         // Optimistic UI Update
         const tempTask = {
             ...previousTask,
             ...formData,
+            dueDate: finalDueDate,
             tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean)
         };
         setTasks(prevTasks => prevTasks.map(task => 
@@ -92,6 +97,7 @@ export const TaskProvider = ({ children }) => {
         try {
             const taskData = {
                 ...formData,
+                dueDate: finalDueDate,
                 tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
             };
             
