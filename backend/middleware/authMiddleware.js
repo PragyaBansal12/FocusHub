@@ -13,7 +13,6 @@ export function authMiddleware(req, res, next) {
     else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
     }
-    // 3. 🔥 THE DOWNLOAD FIX: Check query parameters
     // This allows the direct link from MaterialsContext.js to work
     else if (req.query && req.query.token) {
       token = req.query.token;
