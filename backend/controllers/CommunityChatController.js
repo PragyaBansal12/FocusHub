@@ -17,12 +17,13 @@ export async function getCommunityMessages(req, res) {
   try {
     // Fetch last 100 messages for the community chat
     const messages = await CommunityMessage.find()
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: -1 })
       .limit(100)
       .populate('sender', 'name email profilePicture')
       .lean();
 
-    res.json({ messages: processUserIcons(messages) });
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.json({ messages: processUserIcons(messages).reverse() });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching community messages', error: err.message });
   }
