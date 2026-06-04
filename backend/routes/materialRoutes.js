@@ -7,7 +7,7 @@ import {
     deleteMaterial,
     getStorageStats,
     getPreviewUrl
-} from "../controllers/materialController.js"
+} from "../controllers/MaterialController.js"
 import { authMiddleware as protect } from "../middleware/authMiddleware.js";
 import upload from "../config/multerConfig.js";
 const router = express.Router();
