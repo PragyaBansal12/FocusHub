@@ -148,22 +148,11 @@ export async function downloadMaterial(req, res) {
     material.lastAccessed = new Date();
     await material.save();
     
-    /**
-     * 🛑 THE STABLE FIX FOR PDF DOWNLOADS:
-     * 1. Add fl_attachment to force download.
-     * 2. Force /image/ path because PDFs were uploaded as 'image' type.
-     * 3. STRIP the .pdf extension if it's a PDF. 
-     * Cloudinary serves 'image' resources via their publicId; 
-     * adding .pdf at the end of an /image/ path causes ERR_INVALID_RESPONSE.
-     */
+    // Do NOT strip the .pdf extension. Cloudinary needs it to serve the original PDF.
+    // If it's stripped, Cloudinary tries to serve it as an image and fails with ERR_INVALID_RESPONSE.
     let downloadUrl = material.fileUrl
       .replace('/upload/', '/upload/fl_attachment/')
       .replace('/raw/upload/', '/image/upload/');
-    
-    if (material.fileType === 'pdf') {
-       // Removes .pdf from the end of the URL
-       downloadUrl = downloadUrl.replace(/\.pdf$/i, '');
-    }
     
     console.log(`📥 [Download] Fixed Redirect: ${downloadUrl}`);
     res.redirect(downloadUrl);
