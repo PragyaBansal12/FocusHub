@@ -1,5 +1,3 @@
-// backend/controllers/MaterialController.js
-
 import Material from "../models/Material.js";
 import User from "../models/User.js";
 import { v2 as cloudinary } from 'cloudinary';
@@ -7,23 +5,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// ------------------------------------------------------------------
-// CLOUDINARY CONFIGURATION
-// ------------------------------------------------------------------
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// ------------------------------------------------------------------
-// INTERNAL UTILITY HELPERS
-// ------------------------------------------------------------------
 
-/**
- * Uploads a file buffer from Multer to Cloudinary.
- * Logic: Treat PDFs as 'image' to allow for .jpg thumbnail generation.
- */
 async function uploadFileToCloudinary(file) {
   try {
     const b64 = Buffer.from(file.buffer).toString('base64');

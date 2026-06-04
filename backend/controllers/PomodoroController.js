@@ -2,11 +2,7 @@ import Pomodoro from "../models/Pomodoro.js";
 import Task from "../models/Task.js";
 import mongoose from "mongoose";
 
-// ─────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────
 
-/** Safely parse a positive integer from a query param; returns the default if invalid. */
 const parsePositiveInt = (value, defaultVal, max = 365) => {
   const n = parseInt(value, 10);
   if (Number.isNaN(n) || n < 1) return defaultVal;
@@ -16,13 +12,10 @@ const parsePositiveInt = (value, defaultVal, max = 365) => {
 /** Validate session type */
 const VALID_TYPES = new Set(["focus", "break"]);
 
-// ─────────────────────────────────────────────
-// SAVE SESSION
-// ─────────────────────────────────────────────
 
 export async function saveSession(req, res) {
   try {
-    const userId = req.user?.id; // ✅ FIX: was req.userId (always undefined)
+    const userId = req.user?.id; 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorised" });
     }
@@ -83,13 +76,11 @@ export async function saveSession(req, res) {
   }
 }
 
-// ─────────────────────────────────────────────
-// GET SESSION HISTORY
-// ─────────────────────────────────────────────
+
 
 export async function getSessions(req, res) {
   try {
-    const userId = req.user?.id; // ✅ FIX
+    const userId = req.user?.id; 
     if (!userId) return res.status(401).json({ message: "Unauthorised" });
 
     const { startDate, endDate, type } = req.query;
@@ -129,13 +120,11 @@ export async function getSessions(req, res) {
   }
 }
 
-// ─────────────────────────────────────────────
-// GET STATS (aggregation pipeline — no JS-side filtering)
-// ─────────────────────────────────────────────
+
 
 export async function getStats(req, res) {
   try {
-    const userId = req.user?.id; // ✅ FIX
+    const userId = req.user?.id; 
     if (!userId) return res.status(401).json({ message: "Unauthorised" });
 
     const weekAgo = new Date();

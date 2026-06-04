@@ -14,10 +14,10 @@ router.get("/history/:otherUserId", authMiddleware, async (req, res) => {
     const conversationId = [myId, otherUserId].sort().join("-");
 
     const messages = await Message.find({ conversationId })
-      .sort({ createdAt: 1 })
-      .limit(50); // Load last 50 messages
+      .sort({ createdAt: -1 })
+      .limit(200); // Load last 200 messages
 
-    res.json(messages);
+    res.json(messages.reverse());
   } catch (err) {
     res.status(500).json({ message: "Error fetching history" });
   }

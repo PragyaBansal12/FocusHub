@@ -30,7 +30,5 @@ router.patch('/:id/toggle', protect, toggleTask);
 
 router.patch('/:id/toggle-alert',protect,toggleOverdueAlert);
 
-// REMOVED: The manual sync route is no longer needed:
-// router.patch('/:id/sync_to_calendar', protect, manualSyncTaskToCalendar);
 
 export default router;

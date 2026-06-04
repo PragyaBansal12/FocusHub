@@ -85,7 +85,7 @@ const syncTaskToCalendar = async (userId, task) => {
             });
         }
     } catch (err) {
-        console.error("❌ Calendar Sync Error (Create/Update):", err.message);
+        console.error("Calendar Sync Error (Create/Update):", err.message);
         // Do not re-throw, just log and let the main function succeed
     }
 };

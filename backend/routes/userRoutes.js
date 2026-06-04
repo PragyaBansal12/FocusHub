@@ -5,9 +5,6 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// @route   PUT /api/user/update
-// @desc    Update user profile (Name and/or Image)
-// @access  Private
 router.put("/update", authMiddleware, upload.single("image"), async (req, res) => {
   try {
     const { name } = req.body;
