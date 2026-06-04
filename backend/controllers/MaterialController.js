@@ -154,6 +154,7 @@ export async function downloadMaterial(req, res) {
       resource_type: material.fileType === 'pdf' ? 'image' : 'auto',
       format: material.fileType === 'pdf' ? 'pdf' : undefined,
       flags: 'attachment',
+      sign_url: true,
       secure: true
     });
     
