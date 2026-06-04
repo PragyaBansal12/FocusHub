@@ -148,15 +148,16 @@ export async function downloadMaterial(req, res) {
     material.lastAccessed = new Date();
     await material.save();
     
-    // Use Cloudinary SDK to reliably generate a download URL
-    // It properly handles the .pdf extension and adds the attachment flag
-    const downloadUrl = cloudinary.url(material.publicId, {
-      resource_type: material.fileType === 'pdf' ? 'image' : 'auto',
-      format: material.fileType === 'pdf' ? 'pdf' : undefined,
-      flags: 'attachment',
-      sign_url: true,
-      secure: true
-    });
+    // Start with the original valid URL from the database
+    let downloadUrl = material.fileUrl
+      .replace('/upload/', '/upload/fl_attachment/')
+      .replace('/raw/upload/', '/image/upload/');
+
+    // 🛑 CRITICAL FIX: If it's a PDF, Cloudinary MUST have the .pdf extension to serve it properly.
+    // If the original URL in the DB doesn't have it, we append it safely.
+    if (material.fileType === 'pdf' && !downloadUrl.toLowerCase().endsWith('.pdf')) {
+      downloadUrl += '.pdf';
+    }
     
     console.log(`📥 [Download] Fixed Redirect: ${downloadUrl}`);
     res.redirect(downloadUrl);
