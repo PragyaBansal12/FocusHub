@@ -102,7 +102,8 @@ export function MaterialsProvider({ children }) {
         description: metadata.description || '',
         subject: metadata.subject || '',
         tags: metadata.tags || [],
-        type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type === 'application/pdf' ? 'pdf' : 'document',
+        fileType: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type === 'application/pdf' ? 'pdf' : 'document',
+        fileSize: file.size || 0,
         fileUrl: '', // Not downloadable yet
         createdAt: new Date().toISOString(),
         isOptimistic: true // Optional flag if the UI wants to show a spinner on this specific card
