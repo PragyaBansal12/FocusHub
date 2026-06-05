@@ -21,8 +21,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
-import cron from "./routes/cronRoutes.js";
-
+import cron from "./routes/CronRoutes.js";
 import { setupSocketHandlers } from "./socket/socketHandler.js"
 import { startScheduler } from "./services/schedulerService.js"
 
