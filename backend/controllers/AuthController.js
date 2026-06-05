@@ -35,45 +35,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     });
 };
 
-
 export async function googleLogin(req, res) {
-   const { token } = req.body;
-
-    try {
-        const ticket = await client.verifyIdToken({
-            idToken: token,
-            audience: process.env.GOOGLE_LOGIN_CLIENT_ID,
-        });
-
-        const { name, email, picture, sub } = ticket.getPayload();
-        const normalizedEmail = email.toLowerCase().trim();
-
-        const existingUser = await User.findOne({ email: normalizedEmail });
-
-        if (existingUser) {
-            return res.status(400).json({ 
-                message: "An account already exists with this email. Please Log In." 
-            });
-        }
-
-        // Create the new user
-        const newUser = await User.create({
-            name,
-            email: normalizedEmail,
-            profilePicture: picture,
-            googleId: sub,
-        });
-
-        sendTokenResponse(newUser, 201, res, "Google signup successful");
-
-    } catch (error) {
-        console.error("Google Signup Error:", error);
-        res.status(400).json({ message: "Google signup failed", error: error.message });
-    }
-}
-
-// --- GOOGLE SIGNUP (New Users Only) ---
-export async function googleSignup(req, res) {
     const { token } = req.body;
 
     try {
@@ -85,29 +47,34 @@ export async function googleSignup(req, res) {
         const { name, email, picture, sub } = ticket.getPayload();
         const normalizedEmail = email.toLowerCase().trim();
 
-        const existingUser = await User.findOne({ email: normalizedEmail });
+        let user = await User.findOne({ email: normalizedEmail });
 
-        if (existingUser) {
-            return res.status(400).json({ 
-                message: "An account already exists with this email. Please Log In." 
+        if (user) {
+            // User exists: Update googleId if missing, then log them in
+            if (!user.googleId) {
+                user.googleId = sub;
+                await user.save();
+            }
+            return sendTokenResponse(user, 200, res, "Google login successful");
+        } else {
+            // User does not exist: Create a new account
+            user = await User.create({
+                name,
+                email: normalizedEmail,
+                profilePicture: picture,
+                googleId: sub,
             });
+            return sendTokenResponse(user, 201, res, "Google signup successful");
         }
 
-        // Create the new user
-        const newUser = await User.create({
-            name,
-            email: normalizedEmail,
-            profilePicture: picture,
-            googleId: sub,
-        });
-
-        sendTokenResponse(newUser, 201, res, "Google signup successful");
-
     } catch (error) {
-        console.error("Google Signup Error:", error);
-        res.status(400).json({ message: "Google signup failed", error: error.message });
+        console.error("Google Auth Error:", error);
+        res.status(400).json({ message: "Google verification failed", error: error.message });
     }
 }
+
+// We can safely map googleSignup to use the exact same unified logic
+export const googleSignup = googleLogin;
 
 // --- STANDARD SIGNUP CONTROLLER ---
 export async function signup(req, res) {
