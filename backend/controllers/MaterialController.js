@@ -2,6 +2,7 @@ import Material from "../models/Material.js";
 import User from "../models/User.js";
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
+import https from 'https';
 
 dotenv.config();
 
@@ -148,19 +149,22 @@ export async function downloadMaterial(req, res) {
     material.lastAccessed = new Date();
     await material.save();
     
-    // Start with the original valid URL from the database
-    let downloadUrl = material.fileUrl
-      .replace('/upload/', '/upload/fl_attachment/')
-      .replace('/raw/upload/', '/image/upload/');
-
-    // 🛑 CRITICAL FIX: If it's a PDF, Cloudinary MUST have the .pdf extension to serve it properly.
-    // If the original URL in the DB doesn't have it, we append it safely.
-    if (material.fileType === 'pdf' && !downloadUrl.toLowerCase().endsWith('.pdf')) {
-      downloadUrl += '.pdf';
+    // Get the standard original URL from Cloudinary (WITHOUT fl_attachment)
+    let fileUrl = material.fileUrl.replace('/raw/upload/', '/image/upload/');
+    if (material.fileType === 'pdf' && !fileUrl.toLowerCase().endsWith('.pdf')) {
+      fileUrl += '.pdf';
     }
     
-    console.log(`📥 [Download] Fixed Redirect: ${downloadUrl}`);
-    res.redirect(downloadUrl);
+    // Proxy the download through the backend. 
+    // This perfectly bypasses Cloudinary's strict attachment/signature errors!
+    https.get(fileUrl, (proxyRes) => {
+      res.setHeader('Content-Type', material.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(material.originalName)}"`);
+      proxyRes.pipe(res);
+    }).on('error', (e) => {
+      console.error("Proxy Download Error:", e);
+      res.status(500).json({ success: false, message: "Download failed" });
+    });
 
   } catch (err) {
     console.error("❌ Download Error:", err);
@@ -243,18 +247,12 @@ export async function getPreviewUrl(req, res) {
     const material = await Material.findOne({ _id: req.params.id, user: req.user.id });
     if (!material) return res.status(404).json({ success: false, message: "Material not found" });
 
-    if (material.fileType === 'pdf') {
-      const signedUrl = cloudinary.url(material.publicId, {
-        resource_type: 'image',
-        type: 'upload',
-        format: 'pdf',
-        sign_url: true,
-        secure: true
-      });
-      return res.json({ success: true, url: signedUrl });
+    let previewUrl = material.fileUrl.replace('/raw/upload/', '/image/upload/');
+    if (material.fileType === 'pdf' && !previewUrl.toLowerCase().endsWith('.pdf')) {
+      previewUrl += '.pdf';
     }
     
-    return res.json({ success: true, url: material.fileUrl });
+    return res.json({ success: true, url: previewUrl });
   } catch (err) {
     console.error("Preview URL Error:", err);
     res.status(500).json({ success: false, message: "Failed to generate preview URL" });
