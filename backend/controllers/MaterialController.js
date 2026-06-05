@@ -143,7 +143,12 @@ export async function downloadMaterial(req, res) {
   try {
     const material = await Material.findOne({ _id: req.params.id, user: req.user.id });
     
-    if (!material) return res.status(404).json({ message: "Material not found" });
+    if (!material) {
+      return res.status(404).json({ 
+        message: "Material not found", 
+        debug: { paramId: req.params.id, userId: req.user?.id } 
+      });
+    }
 
     // Update Analytics
     material.downloadCount += 1;
