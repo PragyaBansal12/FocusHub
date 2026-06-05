@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 import https from 'https';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -155,16 +156,16 @@ export async function downloadMaterial(req, res) {
       fileUrl += '.pdf';
     }
     
-    // Proxy the download through the backend. 
-    // This perfectly bypasses Cloudinary's strict attachment/signature errors!
-    https.get(fileUrl, (proxyRes) => {
-      res.setHeader('Content-Type', material.mimeType || 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(material.originalName)}"`);
-      proxyRes.pipe(res);
-    }).on('error', (e) => {
-      console.error("Proxy Download Error:", e);
-      res.status(500).json({ success: false, message: "Download failed" });
+    // Proxy the download using axios to safely handle Cloudinary redirects
+    const response = await axios({
+      method: 'GET',
+      url: fileUrl,
+      responseType: 'stream'
     });
+
+    res.setHeader('Content-Type', material.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(material.originalName)}"`);
+    response.data.pipe(res);
 
   } catch (err) {
     console.error("❌ Download Error:", err);

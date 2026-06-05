@@ -101,7 +101,7 @@ export const TaskProvider = ({ children }) => {
                 tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
             };
             
-            const res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}`, taskData);
+            const res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}`, taskData, { withCredentials: true });
             const updatedTask = res.data.task; 
             
             // Sync completely with server response
@@ -137,7 +137,7 @@ export const TaskProvider = ({ children }) => {
 
         try {
             // 3. Make background request
-            const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle`);
+            const res = await axios.patch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}/toggle`, {}, { withCredentials: true });
             
             // 4. Sync fully with server (picks up updated timestamps)
             setTasks(prevTasks => prevTasks.map(task => 

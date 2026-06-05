@@ -25,7 +25,11 @@ const deleteTaskEvent = async (userId, task) => {
             console.error("❌ Error deleting Google Calendar event:", err.message);
         }
         // If an error occurred, we still assume we should clean up the local ID just in case.
-        await Task.findByIdAndUpdate(task._id, { $set: { googleEventId: null, googleCalendarId: null } });
+        try {
+            await Task.findByIdAndUpdate(task._id, { $set: { googleEventId: null, googleCalendarId: null } });
+        } catch (dbErr) {
+            console.error("❌ Error cleaning up local Google Event ID:", dbErr.message);
+        }
     }
 };
 
