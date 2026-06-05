@@ -145,23 +145,29 @@ export async function downloadMaterial(req, res) {
     
     if (!material) {
       return res.status(404).json({ 
+        success: false,
         message: "Material not found", 
         debug: { paramId: req.params.id, userId: req.user?.id } 
       });
     }
 
-    // Update Analytics
-    material.downloadCount += 1;
+    // FIX 1: Prevent "NaN" validation errors. 
+    // If downloadCount was previously undefined in older documents, adding 1 to it results in NaN.
+    // Mongoose will throw a 500 error if you try to save NaN to a Number field.
+    material.downloadCount = (material.downloadCount || 0) + 1;
     material.lastAccessed = new Date();
     await material.save();
     
+    // FIX 2: Prevent TypeError if fileUrl somehow doesn't exist on the document
+    if (!material.fileUrl) {
+      return res.status(500).json({ success: false, message: "File URL is missing in database" });
+    }
+
     let fileUrl = material.fileUrl.replace('/raw/upload/', '/image/upload/');
     if (material.fileType === 'pdf' && !fileUrl.toLowerCase().endsWith('.pdf')) {
       fileUrl += '.pdf';
     }
     
-    // Instead of proxying a stream through Render (which frequently hangs/times out),
-    // we return the direct URL. The frontend will handle the Blob download to force the filename.
     return res.json({ 
       success: true, 
       url: fileUrl, 
@@ -170,7 +176,13 @@ export async function downloadMaterial(req, res) {
 
   } catch (err) {
     console.error("❌ Download Error:", err);
-    res.status(500).json({ success: false, message: "Download failed" });
+    
+    // FIX 3: Catch malformed ObjectIds gracefully
+    if (err.name === 'CastError') {
+      return res.status(400).json({ success: false, message: "Invalid Material ID format" });
+    }
+
+    res.status(500).json({ success: false, message: "Download failed", error: err.message });
   }
 }
 /**
