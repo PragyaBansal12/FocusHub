@@ -189,29 +189,45 @@ export function MaterialsProvider({ children }) {
 
   /**
    * Download a material
-   * 🛑 FIX: Uses a direct anchor click to handle the Backend redirect properly.
    */
   const downloadMaterial = useCallback(async (id) => {
     try {
       const token = localStorage.getItem('token');
       
-      // We pass the token in the URL because a direct window/link request 
-      // cannot send 'Authorization' headers like fetch can.
-      const downloadUrl = `${API_BASE_URL}/materials/${id}/download?token=${token}`;
+      // 1. Hit the backend to update Analytics and retrieve the Cloudinary URL
+      const res = await fetch(`${API_BASE_URL}/materials/${id}/download`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
       
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      if (res.ok && data.url) {
+        // 2. Fetch the file directly from Cloudinary as a Blob to enforce the filename
+        const fileRes = await fetch(data.url);
+        const blob = await fileRes.blob();
+        
+        // 3. Create a local temporary download link
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = data.originalName || "download";
+        document.body.appendChild(a);
+        a.click();
+        
+        // 4. Clean up
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+        
+        // Refresh stats
+        fetchStats();
+        return { success: true };
+      }
       
-      return { success: true };
+      return { success: false, error: data.message || "Failed to retrieve download URL" };
     } catch (error) {
-      console.error('❌ Error downloading:', error);
+      console.error("Download failed:", error);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [fetchStats]);
 
   /**
    * Clear all filters

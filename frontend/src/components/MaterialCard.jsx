@@ -35,6 +35,7 @@ export default function MaterialCard({ material }) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // ============================================
@@ -54,7 +55,12 @@ export default function MaterialCard({ material }) {
   }
 
   async function handleDownload() {
-    await downloadMaterial(material._id, material.originalName);
+    setDownloading(true);
+    const result = await downloadMaterial(material._id, material.originalName);
+    if (!result.success) {
+      alert(`Download failed: ${result.error}`);
+    }
+    setDownloading(false);
   }
 
   async function handlePreview() {
@@ -128,10 +134,13 @@ export default function MaterialCard({ material }) {
                 e.stopPropagation();
                 handleDownload();
               }}
-              className="p-3 bg-white rounded-full hover:bg-gray-100 transition shadow-lg"
+              disabled={downloading}
+              className="p-3 bg-white rounded-full hover:bg-gray-100 transition shadow-lg disabled:opacity-50"
               title="Download"
             >
-              <span className="text-gray-900"><Download size={20} /></span>
+              <span className="text-gray-900">
+                {downloading ? <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /> : <Download size={20} />}
+              </span>
             </button>
           </div>
         </div>
@@ -177,10 +186,15 @@ export default function MaterialCard({ material }) {
           <div className="flex gap-2">
             <button
               onClick={handleDownload}
-              className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center justify-center gap-2"
+              disabled={downloading}
+              className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Download size={16} />
-              Download
+              {downloading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+              {downloading ? 'Downloading...' : 'Download'}
             </button>
             <button
               onClick={handleDelete}

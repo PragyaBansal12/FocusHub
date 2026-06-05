@@ -150,22 +150,18 @@ export async function downloadMaterial(req, res) {
     material.lastAccessed = new Date();
     await material.save();
     
-    // Get the standard original URL from Cloudinary (WITHOUT fl_attachment)
     let fileUrl = material.fileUrl.replace('/raw/upload/', '/image/upload/');
     if (material.fileType === 'pdf' && !fileUrl.toLowerCase().endsWith('.pdf')) {
       fileUrl += '.pdf';
     }
     
-    // Proxy the download using axios to safely handle Cloudinary redirects
-    const response = await axios({
-      method: 'GET',
-      url: fileUrl,
-      responseType: 'stream'
+    // Instead of proxying a stream through Render (which frequently hangs/times out),
+    // we return the direct URL. The frontend will handle the Blob download to force the filename.
+    return res.json({ 
+      success: true, 
+      url: fileUrl, 
+      originalName: material.originalName 
     });
-
-    res.setHeader('Content-Type', material.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(material.originalName)}"`);
-    response.data.pipe(res);
 
   } catch (err) {
     console.error("❌ Download Error:", err);
