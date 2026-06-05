@@ -21,6 +21,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import cron from "./routes/cronRoutes.js";
 
 import { setupSocketHandlers } from "./socket/socketHandler.js"
 import { startScheduler } from "./services/schedulerService.js"
@@ -90,6 +91,7 @@ app.use("/api/messages",messageRoutes);
 app.use("/api/user",userRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/subscription", subscriptionRoutes);
+app.use("/api/cron",cron);
 
 
 const PORT = process.env.PORT || 5000;
