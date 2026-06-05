@@ -37,7 +37,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
 
 
 export async function googleLogin(req, res) {
-    const { token } = req.body;
+   const { token } = req.body;
 
     try {
         const ticket = await client.verifyIdToken({
@@ -45,22 +45,30 @@ export async function googleLogin(req, res) {
             audience: process.env.GOOGLE_LOGIN_CLIENT_ID,
         });
 
-        const { email } = ticket.getPayload();
+        const { name, email, picture, sub } = ticket.getPayload();
         const normalizedEmail = email.toLowerCase().trim();
 
-        const user = await User.findOne({ email: normalizedEmail });
+        const existingUser = await User.findOne({ email: normalizedEmail });
 
-        if (!user) {
-            return res.status(404).json({ 
-                message: "No account found with this email. Please Sign Up first." 
+        if (existingUser) {
+            return res.status(400).json({ 
+                message: "An account already exists with this email. Please Log In." 
             });
         }
 
-        sendTokenResponse(user, 200, res, "Google login successful");
+        // Create the new user
+        const newUser = await User.create({
+            name,
+            email: normalizedEmail,
+            profilePicture: picture,
+            googleId: sub,
+        });
+
+        sendTokenResponse(newUser, 201, res, "Google signup successful");
 
     } catch (error) {
-        console.error("Google Login Error:", error);
-        res.status(400).json({ message: "Google verification failed", error: error.message });
+        console.error("Google Signup Error:", error);
+        res.status(400).json({ message: "Google signup failed", error: error.message });
     }
 }
 
