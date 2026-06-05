@@ -9,7 +9,17 @@ import WeeklyPomodoroChart from '../components/charts/WeeklyPomodoroChart';
 import ProductivityHoursChart from '../components/charts/ProductivityHoursChart';
 
 export default function Analytics() {
-  const { analytics, loading } = useAnalytics();
+  const { analytics, loading, fetchAnalytics } = useAnalytics();
+
+  // ============================================
+  // SILENT RE-FETCH ON MOUNT
+  // ============================================
+  
+  React.useEffect(() => {
+    // When the user opens the Analytics tab, fetch the latest data in the background
+    // passing 'true' prevents the spinner from showing if we already have cached data.
+    fetchAnalytics(true);
+  }, [fetchAnalytics]);
 
   // ============================================
   // LOADING STATE

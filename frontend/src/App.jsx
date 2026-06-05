@@ -46,10 +46,12 @@ const ProtectedLayout = ({ handleSessionComplete }) => {
   return (
     <ProtectedRoute>
       <TaskProvider>
-        <DashboardProvider onSessionComplete={handleSessionComplete}>
-          <Outlet />
-          <FloatingTimer />
-        </DashboardProvider>
+        <AnalyticsProvider>
+          <DashboardProvider onSessionComplete={handleSessionComplete}>
+            <Outlet />
+            <FloatingTimer />
+          </DashboardProvider>
+        </AnalyticsProvider>
       </TaskProvider>
     </ProtectedRoute>
   );
@@ -109,11 +111,7 @@ export default function App() {
                   <Chat />
                 </ChatProvider>
               } />
-              <Route path="/analytics" element={
-                <AnalyticsProvider>
-                  <Analytics />
-                </AnalyticsProvider>
-              } />
+              <Route path="/analytics" element={<Analytics />} />
               <Route path="/subscription" element={<Subscription />} />
             </Route>
           </Routes>

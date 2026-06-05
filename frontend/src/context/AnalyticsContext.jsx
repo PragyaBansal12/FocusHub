@@ -61,9 +61,9 @@ export function AnalyticsProvider({children}){
   // FETCH ANALYTICS DATA
   // ============================================
   
-  const fetchAnalytics = useCallback(async () => {
+  const fetchAnalytics = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const token = localStorage.getItem('token');
       
       // Fetch all analytics data in parallel
