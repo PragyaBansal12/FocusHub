@@ -29,7 +29,8 @@ const sendTokenResponse = (user, statusCode, res, message) => {
             name: user.name,
             email: user.email,
             profilePicture: user.profilePicture || (DEFAULT_AVATAR + encodeURIComponent(user.name)),
-            subscriptionPlan: user.subscriptionPlan || 'free'
+            subscriptionPlan: user.subscriptionPlan || 'free',
+            createdAt: user.createdAt
         }
     });
 };
@@ -158,7 +159,8 @@ export const getMe = async (req, res) => {
             name: user.name,
             email: user.email,
             profilePicture: user.profilePicture || (DEFAULT_AVATAR + encodeURIComponent(user.name)),
-            subscriptionPlan: user.subscriptionPlan || 'free'
+            subscriptionPlan: user.subscriptionPlan || 'free',
+            createdAt: user.createdAt
         });
     } catch (error) {
         res.status(500).json({ message: "Server error during session check" });

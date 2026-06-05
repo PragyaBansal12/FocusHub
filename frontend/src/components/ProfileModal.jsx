@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { X, Camera, Loader2, User as UserIcon, Mail } from "lucide-react";
 import axios from "axios";
@@ -10,6 +10,15 @@ export default function ProfileModal({ isOpen, onClose }) {
   const [previewUrl, setPreviewUrl] = useState(user?.profilePicture);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Synchronize state when the modal opens or user updates
+  useEffect(() => {
+    if (isOpen) {
+      setName(user?.name || "");
+      setPreviewUrl(user?.profilePicture);
+      setSelectedFile(null);
+    }
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
