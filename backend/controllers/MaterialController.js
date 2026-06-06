@@ -159,44 +159,37 @@ export async function downloadMaterial(req, res) {
     const material = await Material.findOne({ _id: req.params.id, user: req.user.id });
     
     if (!material) {
-      return res.status(404).json({ 
-        success: false,
-        message: "Material not found", 
-        debug: { paramId: req.params.id, userId: req.user?.id } 
-      });
+      return res.status(404).json({ success: false, message: "Material not found" });
     }
 
-    // FIX 1: Prevent "NaN" validation errors. 
-    // If downloadCount was previously undefined in older documents, adding 1 to it results in NaN.
-    // Mongoose will throw a 500 error if you try to save NaN to a Number field.
     material.downloadCount = (material.downloadCount || 0) + 1;
     material.lastAccessed = new Date();
     await material.save();
     
-    // FIX 2: Prevent TypeError if fileUrl somehow doesn't exist on the document
     if (!material.fileUrl) {
       return res.status(500).json({ success: false, message: "File URL is missing in database" });
     }
 
-    let fileUrl = material.fileUrl.replace('/raw/upload/', '/image/upload/');
-    if (material.fileType === 'pdf' && !fileUrl.toLowerCase().endsWith('.pdf')) {
-      fileUrl += '.pdf';
-    }
+    const secureUrl = material.fileUrl.replace('http://', 'https://');
     
-    return res.json({ 
-      success: true, 
-      url: fileUrl, 
-      originalName: material.originalName 
+    // 🔥 THE PROXY FIX: Stream the file from Cloudinary directly to the user
+    https.get(secureUrl, (fileStream) => {
+      // 1. Tell the frontend this is a file meant for downloading
+      res.setHeader('Content-Disposition', `attachment; filename="${material.originalName || 'download.pdf'}"`);
+      res.setHeader('Content-Type', fileStream.headers['content-type'] || 'application/pdf');
+      
+      // 2. Pipe the binary data directly into the response
+      fileStream.pipe(res);
+    }).on('error', (err) => {
+      console.error("Cloudinary Stream Error:", err);
+      res.status(500).json({ success: false, message: "Failed to pull file from Cloudinary" });
     });
 
   } catch (err) {
     console.error("❌ Download Error:", err);
-    
-    // FIX 3: Catch malformed ObjectIds gracefully
     if (err.name === 'CastError') {
       return res.status(400).json({ success: false, message: "Invalid Material ID format" });
     }
-
     res.status(500).json({ success: false, message: "Download failed", error: err.message });
   }
 }

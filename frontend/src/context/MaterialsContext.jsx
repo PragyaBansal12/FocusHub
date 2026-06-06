@@ -194,35 +194,41 @@ export function MaterialsProvider({ children }) {
     try {
       const token = localStorage.getItem('token');
       
-      // 1. Hit the backend to update Analytics and retrieve the Cloudinary URL
-      const res = await fetch(`${API_BASE_URL}/materials/${id}/download`, {
+      // 1. Fetch directly from YOUR backend proxy, bypassing Cloudinary completely
+      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/materials/${id}/download`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
       
-      if (res.ok && data.url) {
-        // 2. Fetch the file directly from Cloudinary as a Blob to enforce the filename
-        const fileRes = await fetch(data.url);
-        const blob = await fileRes.blob();
-        
-        // 3. Create a local temporary download link
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = data.originalName || "download";
-        document.body.appendChild(a);
-        a.click();
-        
-        // 4. Clean up
-        document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
-        
-        // Refresh stats
-        fetchStats();
-        return { success: true };
+      // 2. Safely handle backend errors
+      if (!res.ok) {
+        const errorData = await res.json();
+        return { success: false, error: errorData.message || "Failed to download file" };
+      }
+
+      // 3. Convert the healthy stream into a Blob
+      const blob = await res.blob();
+      
+      // 4. Extract the original filename we set in the backend header
+      const disposition = res.headers.get('Content-Disposition');
+      let filename = "study_material";
+      if (disposition && disposition.includes('filename="')) {
+        filename = disposition.split('filename="')[1].split('"')[0];
       }
       
-      return { success: false, error: data.message || "Failed to retrieve download URL" };
+      // 5. Trigger the native download
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename; 
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+      
+      fetchStats();
+      return { success: true };
+      
     } catch (error) {
       console.error("Download failed:", error);
       return { success: false, error: error.message };
