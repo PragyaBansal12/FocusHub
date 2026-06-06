@@ -2,10 +2,7 @@
 
 import multer from "multer"
 
-// ------------------------------------------------------------------
-// 🛑 IMPORTANT CHANGE: Switch to Memory Storage 
-// This stores the file as a buffer in req.file.buffer, avoiding local disk errors.
-// ------------------------------------------------------------------
+
 const storage = multer.memoryStorage(); 
 
 // file filter (remains the same)

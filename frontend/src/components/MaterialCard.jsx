@@ -31,7 +31,7 @@ function getCloudinaryPreviewUrl(material, isThumbnail = false) {
 }
 
 export default function MaterialCard({ material }) {
-  const { deleteMaterial, downloadMaterial } = useMaterials();
+  const { deleteMaterial } = useMaterials();
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -51,11 +51,18 @@ export default function MaterialCard({ material }) {
     }
   }
 
-  async function handleDownload() {
+  async function handleDownload(material) {
     setDownloading(true);
-    const result = await downloadMaterial(material._id, material.originalName);
-    if (!result.success) {
-      alert(`Download failed: ${result.error}`);
+    console.log(material);
+    let result = material.fileUrl.replace("/upload/", "/upload/fl_attachment/");
+    //const result = await downloadMaterial(material._id, material.originalName);
+    // if (!result.success) {
+    //   alert(`Download failed: ${result.error}`);
+    // }
+
+    // open the download URL in a new tab
+    if (result) {
+      window.open(result, "_blank");
     }
     setDownloading(false);
   }
@@ -95,7 +102,7 @@ export default function MaterialCard({ material }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleDownload();
+                handleDownload(material);
               }}
               disabled={downloading}
               className="p-3 bg-white rounded-full hover:bg-gray-100 transition shadow-lg disabled:opacity-50"
@@ -148,7 +155,7 @@ export default function MaterialCard({ material }) {
 
           <div className="flex gap-2">
             <button
-              onClick={handleDownload}
+              onClick={() => handleDownload(material)}
               disabled={downloading}
               className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >

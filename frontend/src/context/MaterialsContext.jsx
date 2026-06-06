@@ -190,50 +190,24 @@ export function MaterialsProvider({ children }) {
   /**
    * Download a material
    */
-  const downloadMaterial = useCallback(async (id) => {
-    try {
-      const token = localStorage.getItem('token');
+  // const downloadMaterial = useCallback(async (id) => {
+  //   try {
+  //     const token = localStorage.getItem('token');
       
-      // 1. Fetch directly from YOUR backend proxy, bypassing Cloudinary completely
-      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/materials/${id}/download`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  //     // 1. Fetch directly from YOUR backend proxy, bypassing Cloudinary completely
+  //     const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/materials/${id}/download`, {
+  //       headers: { Authorization: `Bearer ${token}` }
+  //     });
       
-      // 2. Safely handle backend errors
-      if (!res.ok) {
-        const errorData = await res.json();
-        return { success: false, error: errorData.message || "Failed to download file" };
-      }
+      
+  //     return { success: true, downloadUrl: res.downloadUrl };
 
-      // 3. Convert the healthy stream into a Blob
-      const blob = await res.blob();
       
-      // 4. Extract the original filename we set in the backend header
-      const disposition = res.headers.get('Content-Disposition');
-      let filename = "study_material";
-      if (disposition && disposition.includes('filename="')) {
-        filename = disposition.split('filename="')[1].split('"')[0];
-      }
-      
-      // 5. Trigger the native download
-      const blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename; 
-      
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
-      
-      fetchStats();
-      return { success: true };
-      
-    } catch (error) {
-      console.error("Download failed:", error);
-      return { success: false, error: error.message };
-    }
-  }, [fetchStats]);
+  //   } catch (error) {
+  //     console.error("Download failed:", error);
+  //     return { success: false, error: error.message };
+  //   }
+  // }, [fetchStats]);
 
   /**
    * Clear all filters
@@ -275,7 +249,6 @@ export function MaterialsProvider({ children }) {
     fetchStats,
     uploadMaterial,
     deleteMaterial,
-    downloadMaterial
   };
 
   return (

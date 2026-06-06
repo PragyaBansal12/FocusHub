@@ -6,6 +6,8 @@ import https from 'https';
 import axios from 'axios';
 import { Readable } from 'stream';
 
+
+
 dotenv.config();
 
 cloudinary.config({
@@ -18,27 +20,60 @@ async function uploadFileToCloudinary(file) {
   return new Promise((resolve, reject) => {
     // 1. Failsafe: Ensure the file and buffer actually exist
     if (!file || !file.buffer) {
-      return reject(new Error("File buffer is missing. Ensure Multer is using memoryStorage."));
+      return reject(
+        new Error(
+          "File buffer is missing. Ensure Multer is using memoryStorage.",
+        ),
+      );
     }
 
-    const options = {
-      // 2. Fix PDF timeouts: Let Cloudinary handle the file natively instead of forcing it to draw an image
-      resource_type: 'auto', 
+    // 2. Generate a clean base ID without any extension
+    const timestampId = Date.now();
+    const customPublicId = `material_${timestampId}`;
+
+    // 3. Initialize dynamic options
+    const uploadOptions = {
       folder: "learning_materials_app",
-      use_filename: true,
-      unique_filename: true
+      // Default to the clean ID (Cloudinary API requires snake_case keys)
+      public_id: customPublicId,
     };
 
-    // 3. Create the upload stream
+    // 4. Dynamically route the file type
+    if (file.mimetype === "application/pdf") {
+      // Bypass the "raw" security block by using the image pipeline
+      uploadOptions.resource_type = "image";
+      // Force Cloudinary to append the .pdf extension to the final URL
+      uploadOptions.format = "pdf";
+    } else if (file.mimetype.startsWith("video/")) {
+      uploadOptions.resource_type = "video";
+    } else if (file.mimetype.startsWith("image/")) {
+      uploadOptions.resource_type = "image";
+    } else {
+      // Fallback for other allowed documents (Word, Text, etc.)
+      uploadOptions.resource_type = "raw";
+
+      // Raw files strictly REQUIRE the extension inside the public_id
+      let fileExtension = "";
+      if (file.originalname && file.originalname.includes(".")) {
+        fileExtension = file.originalname.substring(
+          file.originalname.lastIndexOf("."),
+        );
+      }
+      uploadOptions.public_id = `${customPublicId}${fileExtension}`;
+    }
+
+    // 5. Create the upload stream
     const uploadStream = cloudinary.uploader.upload_stream(
-      options,
+      uploadOptions,
       (error, result) => {
         if (error) {
           console.error("Cloudinary Stream Error:", error);
-          return reject(new Error(`Cloudinary Upload Failed: ${error.message}`));
+          return reject(
+            new Error(`Cloudinary Upload Failed: ${error.message}`),
+          );
         }
         resolve(result);
-      }
+      },
     );
 
     // 4. Convert the raw buffer into a stream and pipe it to Cloudinary
@@ -92,6 +127,7 @@ export async function uploadMaterial(req, res) {
     }
 
     const uploadResult = await uploadFileToCloudinary(req.file);
+    console.log(uploadResult);
     const { title, description, tags, subject } = req.body;
     
     let manualTags = [];
@@ -113,7 +149,7 @@ export async function uploadMaterial(req, res) {
       fileType: getFileType(req.file.mimetype),
       mimeType: req.file.mimetype,
       fileSize: uploadResult.bytes,
-      fileUrl: uploadResult.secure_url,
+      fileUrl: uploadResult.url,
       publicId: uploadResult.public_id,
       tags: combinedTags,
       subject: subject || ""
@@ -169,20 +205,13 @@ export async function downloadMaterial(req, res) {
     if (!material.fileUrl) {
       return res.status(500).json({ success: false, message: "File URL is missing in database" });
     }
+    const url = material.fileUrl.replace("/upload/", "/upload/fl_attachment/");
+    console.log(url);
 
-    const secureUrl = material.fileUrl.replace('http://', 'https://');
-    
-    // 🔥 THE PROXY FIX: Stream the file from Cloudinary directly to the user
-    https.get(secureUrl, (fileStream) => {
-      // 1. Tell the frontend this is a file meant for downloading
-      res.setHeader('Content-Disposition', `attachment; filename="${material.originalName || 'download.pdf'}"`);
-      res.setHeader('Content-Type', fileStream.headers['content-type'] || 'application/pdf');
-      
-      // 2. Pipe the binary data directly into the response
-      fileStream.pipe(res);
-    }).on('error', (err) => {
-      console.error("Cloudinary Stream Error:", err);
-      res.status(500).json({ success: false, message: "Failed to pull file from Cloudinary" });
+    res.json({
+      success: true,
+      downloadUrl: url,
+      originalName: material.originalName,
     });
 
   } catch (err) {
