@@ -9,7 +9,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [data, setData] = useState({ email: "", password: "" });
-  const [error, setError] = useState(""); // 🔥 Added state for sober on-page errors
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,13 +25,12 @@ export default function Login() {
         navigate("/dashboard");
       }
     } catch (err) {
-      // 🔥 Replaced alert with setError for on-page message
       setError(err.response?.data?.message || "Invalid email or password");
     }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
-    setError(""); // Clear previous errors
+    setError(""); 
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/google`, {
         token: credentialResponse.credential
@@ -44,7 +43,6 @@ export default function Login() {
         navigate("/dashboard");
       }
     } catch (err) {
-      // 🔥 Replaced alert with setError for on-page message
       setError(err.response?.data?.message || "No account found. Please sign up first.");
     }
   };
@@ -52,7 +50,6 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0F172A] p-4 transition-colors duration-300">
 
-      {/* Decorative Background Blurs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px]"></div>
         <div className="absolute bottom-[10%] right-[-5%] w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px]"></div>
@@ -61,7 +58,6 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white dark:bg-[#1E293B] shadow-2xl rounded-3xl p-8 border border-slate-200 dark:border-slate-800 transition-all">
 
-          {/* Header Section */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl text-white shadow-lg mb-4">
               <LogIn size={28} />
@@ -70,7 +66,7 @@ export default function Login() {
             <p className="text-slate-500 dark:text-slate-400 mt-2">Log in to your account</p>
           </div>
 
-          {/* 🔥 Sober Error Display - Matches Signup page */}
+  
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/50 text-red-600 dark:text-red-400 text-sm flex items-start gap-2">
               <span className="mt-1 w-1.5 h-1.5 shrink-0 rounded-full bg-red-600"></span>
@@ -114,7 +110,6 @@ export default function Login() {
             <div className="h-[1px] bg-slate-200 dark:bg-slate-800 flex-grow"></div>
           </div>
 
-          {/* 🔥 Correctly Centered Google Login Button */}
           <div className="flex justify-center w-full">
             <div className="inline-block">
               <GoogleLogin

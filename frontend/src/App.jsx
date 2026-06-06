@@ -7,7 +7,7 @@ import Chat from './pages/Chat';
 import Analytics from './pages/Analytics';
 import Navbar from './components/Navbar';
 import ThemeProvider from './theme/ThemeProvider';
-import Home from './pages/Home';
+
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Subscription from './pages/Subscription';
@@ -25,9 +25,6 @@ import axios from 'axios';
 // Set axios to send cookies with all requests
 axios.defaults.withCredentials = true;
 
-/**
- * 🔥 RESTRICTED ROUTE: Redirects logged-in users away from Auth pages.
- */
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
   
@@ -37,10 +34,7 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-/**
- * 🔥 PROTECTED LAYOUT: Wraps all protected routes in the global providers.
- * This ensures the Timer and Tasks states survive route changes!
- */
+
 const ProtectedLayout = ({ handleSessionComplete }) => {
   usePushNotifications();
   return (
@@ -66,11 +60,11 @@ export default function App() {
 
   // Handler for when pomodoro session completes
   async function handleSessionComplete(sessionData) {
-    console.log("🍅 Pomodoro session completed:", sessionData);
+    console.log("Pomodoro session completed:", sessionData);
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/pomodoro`, sessionData);
       if (res.status === 200) {
-        console.log("✅ Session saved to database");
+        console.log(" Session saved to database");
       }
     } catch (error) {
       if (error.response && error.response.status === 401) {
@@ -88,16 +82,12 @@ export default function App() {
         
         <main className={`${showNavbar ? 'p-6' : 'p-0'} max-w-7xl mx-auto`}>
           <Routes>
-            {/* 1. Public Routes */}
-            <Route path="/home" element={<Home />} />
-            
+
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
 
-            {/* Root path redirect */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             
-            {/* 2. Protected Routes (Wrapped in Providers so timer never dies) */}
             <Route element={<ProtectedLayout handleSessionComplete={handleSessionComplete} />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/tasks" element={<Tasks />} />

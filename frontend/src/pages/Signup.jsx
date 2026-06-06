@@ -80,7 +80,6 @@ export default function Signup() {
             <p className="text-slate-500 dark:text-slate-400 mt-2">Start organizing your study journey today.</p>
           </div>
 
-          {/* Error Message - Sober and simple */}
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/50 text-red-600 dark:text-red-400 text-sm flex items-start gap-2">
               <span className="mt-1 w-1.5 h-1.5 shrink-0 rounded-full bg-red-600"></span>
