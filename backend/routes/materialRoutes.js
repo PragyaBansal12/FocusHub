@@ -5,8 +5,7 @@ import {
     getMaterial,
     downloadMaterial,
     deleteMaterial,
-    getStorageStats,
-    getPreviewUrl
+    getStorageStats
 } from "../controllers/MaterialController.js"
 import { authMiddleware as protect } from "../middleware/authMiddleware.js";
 import upload from "../config/multerConfig.js";
@@ -33,7 +32,6 @@ router.get("/:id/download", downloadMaterial);
 //delete material
 router.delete("/:id", deleteMaterial);
 
-//preview material (generates signed url)
-router.get("/:id/preview", getPreviewUrl);
+
 
 export default router;

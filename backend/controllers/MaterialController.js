@@ -267,23 +267,3 @@ export async function getMaterial(req, res) {
   }
 }
 
-/**
- * @route   GET /api/materials/:id/preview
- * Generates a signed Cloudinary URL to bypass strict PDF delivery restrictions.
- */
-export async function getPreviewUrl(req, res) {
-  try {
-    const material = await Material.findOne({ _id: req.params.id, user: req.user.id });
-    if (!material) return res.status(404).json({ success: false, message: "Material not found" });
-
-    let previewUrl = material.fileUrl.replace('/raw/upload/', '/image/upload/');
-    if (material.fileType === 'pdf' && !previewUrl.toLowerCase().endsWith('.pdf')) {
-      previewUrl += '.pdf';
-    }
-    
-    return res.json({ success: true, url: previewUrl });
-  } catch (err) {
-    console.error("Preview URL Error:", err);
-    res.status(500).json({ success: false, message: "Failed to generate preview URL" });
-  }
-}
