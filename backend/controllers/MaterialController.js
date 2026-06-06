@@ -4,6 +4,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 import https from 'https';
 import axios from 'axios';
+import { Readable } from 'stream';
 
 dotenv.config();
 
@@ -13,22 +14,36 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-
 async function uploadFileToCloudinary(file) {
-  try {
-    const b64 = Buffer.from(file.buffer).toString('base64');
-    const dataURI = `data:${file.mimetype};base64,${b64}`;
+  return new Promise((resolve, reject) => {
+    // 1. Failsafe: Ensure the file and buffer actually exist
+    if (!file || !file.buffer) {
+      return reject(new Error("File buffer is missing. Ensure Multer is using memoryStorage."));
+    }
 
     const options = {
-      // Force PDFs to 'image' for thumbnail support
-      resource_type: file.mimetype === 'application/pdf' ? 'image' : 'auto',
+      // 2. Fix PDF timeouts: Let Cloudinary handle the file natively instead of forcing it to draw an image
+      resource_type: 'auto', 
       folder: "learning_materials_app",
+      use_filename: true,
+      unique_filename: true
     };
-    
-    return await cloudinary.uploader.upload(dataURI, options);
-  } catch (error) {
-    throw new Error(`Cloudinary Upload Failed: ${error.message}`);
-  }
+
+    // 3. Create the upload stream
+    const uploadStream = cloudinary.uploader.upload_stream(
+      options,
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary Stream Error:", error);
+          return reject(new Error(`Cloudinary Upload Failed: ${error.message}`));
+        }
+        resolve(result);
+      }
+    );
+
+    // 4. Convert the raw buffer into a stream and pipe it to Cloudinary
+    Readable.from(file.buffer).pipe(uploadStream);
+  });
 }
 
 function getFileType(mimeType) {
