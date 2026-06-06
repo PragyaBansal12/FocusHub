@@ -39,7 +39,7 @@ export default function Login() {
         withCredentials: true
       });
 
-      if (res.status === 200) {
+      if (res.status === 200||res.status==201) {
         login(res.data);
         navigate("/dashboard");
       }
