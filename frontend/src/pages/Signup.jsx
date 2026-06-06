@@ -19,7 +19,7 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); 
+    setError("");
 
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/signup`, {
@@ -43,7 +43,7 @@ export default function Signup() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/google-signup`, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/google`, {
         token: credentialResponse.credential
       }, {
         withCredentials: true
@@ -51,7 +51,7 @@ export default function Signup() {
 
       if (res.status === 200 || res.status === 201) {
         login(res.data);
-        navigate("/dashboard"); 
+        navigate("/dashboard");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Google Signup failed");
@@ -70,7 +70,7 @@ export default function Signup() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white dark:bg-[#1E293B] shadow-2xl shadow-indigo-500/10 rounded-3xl p-8 border border-slate-200 dark:border-slate-800">
-          
+
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl text-white shadow-lg mb-4">
@@ -154,7 +154,7 @@ export default function Signup() {
 
           <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-8">
             Already a member?{" "}
-            <button 
+            <button
               onClick={() => navigate("/login")}
               className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline underline-offset-4"
             >

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import axios from "axios"; 
+import axios from "axios";
 import { GoogleLogin } from "@react-oauth/google";
 import { Mail, Lock, LogIn, ArrowRight } from "lucide-react";
 
@@ -17,12 +17,12 @@ export default function Login() {
 
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/login`, data, {
-        withCredentials: true 
+        withCredentials: true
       });
 
       if (res.status === 200) {
-        login(res.data); 
-        navigate("/dashboard"); 
+        login(res.data);
+        navigate("/dashboard");
       }
     } catch (err) {
       // 🔥 Replaced alert with setError for on-page message
@@ -33,7 +33,7 @@ export default function Login() {
   const handleGoogleSuccess = async (credentialResponse) => {
     setError(""); // Clear previous errors
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/google-login`, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/google`, {
         token: credentialResponse.credential
       }, {
         withCredentials: true
@@ -51,7 +51,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0F172A] p-4 transition-colors duration-300">
-      
+
       {/* Decorative Background Blurs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px]"></div>
@@ -60,7 +60,7 @@ export default function Login() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white dark:bg-[#1E293B] shadow-2xl rounded-3xl p-8 border border-slate-200 dark:border-slate-800 transition-all">
-          
+
           {/* Header Section */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl text-white shadow-lg mb-4">
@@ -130,8 +130,8 @@ export default function Login() {
 
           <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-8 font-medium">
             Don't have an account?{" "}
-            <span 
-              className="text-indigo-600 dark:text-indigo-400 underline decoration-indigo-500/30 underline-offset-4 cursor-pointer hover:text-indigo-700 transition-all font-bold" 
+            <span
+              className="text-indigo-600 dark:text-indigo-400 underline decoration-indigo-500/30 underline-offset-4 cursor-pointer hover:text-indigo-700 transition-all font-bold"
               onClick={() => navigate("/signup")}
             >
               Sign up

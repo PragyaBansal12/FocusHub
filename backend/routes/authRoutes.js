@@ -1,5 +1,5 @@
 import express from "express";
-import { login, signup, getMe ,getAllStudents,googleLogin,googleSignup,logout} from "../controllers/AuthController.js" // 🔥 FIX: Import getMe
+import { login, signup, getMe ,getAllStudents,googleLogin,logout} from "../controllers/AuthController.js" // 🔥 FIX: Import getMe
 import { authMiddleware } from "../middleware/authMiddleware.js"; // 🔥 FIX: Import authMiddleware
 
 const router = express.Router();
@@ -8,8 +8,8 @@ const router = express.Router();
 router.post("/signup", signup);
 router.post("/login", login);
 router.post("/logout", logout);
-router.post("/google-login", googleLogin);
-router.post("/google-signup", googleSignup);
+router.post("/google", googleLogin);
+
 
 router.get("/me", authMiddleware, getMe);
 
