@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import PomodoroTimer from "../components/PomodoroTimer";
 import { CheckSquare, BookOpen, MessageSquare, TrendingUp, ArrowRight, LayoutDashboard } from "lucide-react";
-
-// 🔥 NEW IMPORT: Get the Task Context
 import { useTasks } from "../context/TaskContext";
 
 export default function Dashboard() {
@@ -16,19 +14,14 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  // 🔥 NEW: Consume Task Context
   const { tasks, loading: tasksLoading } = useTasks();
 
-  // DERIVED STATE: Filter tasks locally using the context's full task list
   const todayTasks = tasks.filter(task => {
     if (!task.dueDate || task.completed) return false;
     const today = new Date().toDateString();
     return new Date(task.dueDate).toDateString() === today;
   });
 
-  // ============================================
-  // FETCH DASHBOARD DATA (Only Pomodoro Stats)
-  // ============================================
 
   const fetchDashboardData = useCallback(async () => {
     try {

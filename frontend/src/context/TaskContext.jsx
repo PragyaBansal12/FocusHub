@@ -1,26 +1,17 @@
-// src/context/TaskContext.js - FINAL CORRECTED CODE READY TO COPY PASTE
-
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import axios from 'axios'; // axios is correctly imported
 
-// 1. Create the Context object
 export const TaskContext = createContext();
 
 export const TaskProvider = ({ children }) => {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // ============================================
-    // TASK API FUNCTIONS (Fetch, CRUD)
-    // ============================================
 
-    // 🔴 FIX 1: fetchTasks converted to axios.get
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-            // 🔥 REMOVED: const token = localStorage.getItem("token");
-            
-            // Use axios.get: automatically sends secure cookie
+
             const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks`);
             
             // Axios response data is at res.data
@@ -37,11 +28,10 @@ export const TaskProvider = ({ children }) => {
         fetchTasks();
     }, [fetchTasks]);
 
-    // 🔴 FIX 2: createTask converted to axios.post
     const createTask = async (formData) => {
         const finalDueDate = formData.dueDate ? new Date(formData.dueDate).toISOString() : null;
 
-        // Optimistic UI Update
+        //optimistic ui update
         const tempId = "temp-" + Date.now();
         const tempTask = {
             _id: tempId,
@@ -62,7 +52,6 @@ export const TaskProvider = ({ children }) => {
                 tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean) 
             };
             
-            // Use axios.post: automatically sends secure cookie
             const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks`, taskData);
 
             // Replace temp task with real task from server
@@ -77,9 +66,7 @@ export const TaskProvider = ({ children }) => {
         }
     };
     
-    
-    // ✅ updateTask (This was already converted correctly in the previous step)
-    const updateTask = async (id, formData) => {
+        const updateTask = async (id, formData) => {
         const previousTask = tasks.find(t => t._id === id);
         const finalDueDate = formData.dueDate ? new Date(formData.dueDate).toISOString() : null;
         
@@ -117,14 +104,13 @@ export const TaskProvider = ({ children }) => {
             ));
             
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                console.error("❌ Authentication Failed: Task update rejected by server.", error);
+                console.error("Authentication Failed: Task update rejected by server.", error);
             }
             console.error("Error updating task:", error);
             throw new Error("Failed to update task due to server or network error.");
         }
     };
 
-    // ✅ toggleTask (Optimistic UI Update for zero latency)
     const toggleTask = async (id) => {
         // 1. Save previous state for reverting on error
         const previousTask = tasks.find(t => t._id === id);
@@ -151,10 +137,10 @@ export const TaskProvider = ({ children }) => {
             ));
             
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                console.error("❌ Authentication Failed: Task toggle rejected by server.");
+                console.error("Authentication Failed: Task toggle rejected by server.");
             }
             if (error.message === 'Failed to fetch') {
-                 console.error("⚠️ Network Error: Server likely offline or URL is wrong.");
+                 console.error("Network Error: Server likely offline or URL is wrong.");
             }
             
             console.error("Error toggling task:", error);
@@ -162,9 +148,7 @@ export const TaskProvider = ({ children }) => {
         }
     };
     
-    // 🔴 FIX 3: deleteTask converted to axios.delete
     const deleteTask = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this task?")) return;
 
         const previousTask = tasks.find(t => t._id === id);
         
@@ -172,7 +156,6 @@ export const TaskProvider = ({ children }) => {
         setTasks(prevTasks => prevTasks.filter(task => task._id !== id));
 
         try {
-            // Use axios.delete: automatically sends secure cookie
             const res = await axios.delete(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tasks/${id}`);
 
             if (res.status !== 200 && res.status !== 204) {
@@ -180,7 +163,6 @@ export const TaskProvider = ({ children }) => {
             }
             
         } catch (error) {
-            // Revert UI on failure
             if (previousTask) {
                 setTasks(prevTasks => [...prevTasks, previousTask]);
             }
@@ -220,10 +202,6 @@ export const TaskProvider = ({ children }) => {
         }
     };
 
-    // ============================================
-    // DERIVED STATE / HELPER FUNCTIONS
-    // ============================================
-    // (Rest of the file remains the same)
 
     const getTasksDueToday = () => {
         const today = new Date().toISOString().split('T')[0];
@@ -255,7 +233,6 @@ export const TaskProvider = ({ children }) => {
     );
 };
 
-// Custom hook for easy consumption
 export const useTasks = () => {
     const context = useContext(TaskContext);
     if (!context) {

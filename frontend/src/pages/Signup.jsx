@@ -62,7 +62,6 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0F172A] p-4 transition-colors duration-300">
-      {/* Background Decorative Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px]"></div>
         <div className="absolute bottom-[10%] right-[-5%] w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px]"></div>
@@ -71,7 +70,6 @@ export default function Signup() {
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white dark:bg-[#1E293B] shadow-2xl shadow-indigo-500/10 rounded-3xl p-8 border border-slate-200 dark:border-slate-800">
 
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl text-white shadow-lg mb-4">
               <User size={28} />
@@ -130,14 +128,12 @@ export default function Signup() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="my-8 flex items-center gap-4">
             <div className="h-[1px] bg-slate-200 dark:bg-slate-800 flex-grow"></div>
             <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">Or continue with</span>
             <div className="h-[1px] bg-slate-200 dark:bg-slate-800 flex-grow"></div>
           </div>
 
-          {/* Correctly Centered Google Button */}
           <div className="flex justify-center w-full">
             <div className="inline-block">
               <GoogleLogin

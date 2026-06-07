@@ -4,7 +4,7 @@ import axios from "axios";
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
-// 🔥 CRITICAL: Configure axios to always send cookies with requests
+
 axios.defaults.withCredentials = true; 
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth`; 
 
