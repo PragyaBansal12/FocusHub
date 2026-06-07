@@ -76,7 +76,6 @@ export default function Tasks() {
     }
 
     async function handleCalendarDisconnect() {
-        if (!window.confirm("Disconnect Google Calendar?")) return;
         try {
             const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/calendar/disconnect`);
             if (res.status === 200) { setIsCalendarSynced(false); checkSyncStatus(); }
@@ -133,8 +132,6 @@ export default function Tasks() {
     }
 
     async function handleDeleteTask(id) {
-        // REMOVED window.confirm here to prevent double popups 
-        // as your TaskContext likely handles the confirmation logic.
         try { 
             await deleteTask(id); 
         } catch (error) { 
@@ -294,7 +291,6 @@ export default function Tasks() {
                                         </div>
                                     </div>
 
-                                    {/* FIXED: Removed opacity-0 to make buttons always visible */}
                                     <div className="flex items-center gap-1 flex-shrink-0 transition-opacity">
                                         <button
                                             onClick={() => handleToggleEmailReminder(task._id)}
@@ -328,7 +324,6 @@ export default function Tasks() {
                 )}
             </div>
 
-            {/* Shiny Upgrade Modal */}
             {showUpgradeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="w-full max-w-md bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl p-8 border border-indigo-500/30 text-center relative overflow-hidden">

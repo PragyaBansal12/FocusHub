@@ -9,8 +9,6 @@ export default function Subscription() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
-    // Plan IDs should be fetched from env or constants, but for now we hardcode placeholders
-    // You must replace these with your actual Razorpay Plan IDs
     const plans = [
         {
             id: 'free',

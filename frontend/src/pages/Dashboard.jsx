@@ -43,9 +43,7 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // ============================================
-  // HANDLE POMODORO SESSION COMPLETION
-  // ============================================
+
 
   async function handleSessionComplete(sessionData) {
     try {
@@ -67,9 +65,6 @@ export default function Dashboard() {
     }
   }
 
-  // ============================================
-  // QUICK LINKS CONFIGURATION
-  // ============================================
 
   const quickLinks = [
     {
@@ -110,7 +105,6 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header with improved dark visibility */}
       <div className="flex items-center gap-3 mb-8">
         <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg">
           <LayoutDashboard size={24} />
@@ -125,7 +119,6 @@ export default function Dashboard() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
 
-          {/* Welcome Card - Brighter Dark Mode */}
           <div className="rounded-2xl p-6 bg-white dark:bg-[#1E293B] shadow-md border border-transparent dark:border-slate-700/50">
             <h2 className="text-2xl font-semibold mb-2 text-slate-900 dark:text-white">Welcome back! 👋</h2>
             <p className="text-sm text-gray-600 dark:text-slate-300">
@@ -133,7 +126,6 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* Quick Links Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {quickLinks.map((link) => {
               const Icon = link.icon;
@@ -158,7 +150,6 @@ export default function Dashboard() {
             })}
           </div>
 
-          {/* Today's Tasks Preview - Enhanced contrast */}
           <div className="rounded-2xl p-6 bg-white dark:bg-[#1E293B] shadow-md border border-transparent dark:border-slate-700/50">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-semibold text-slate-900 dark:text-white">Today's Tasks</h3>
@@ -200,7 +191,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Sidebar */}
         <aside className="space-y-6">
           <div className="rounded-2xl p-1 bg-white dark:bg-[#1E293B] shadow-md border border-transparent dark:border-slate-700/50">
             <PomodoroTimer onSessionComplete={handleSessionComplete} />
