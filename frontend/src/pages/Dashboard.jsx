@@ -14,13 +14,9 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  const { tasks, loading: tasksLoading } = useTasks();
+  const { loading: tasksLoading, getTasksDueToday } = useTasks();
 
-  const todayTasks = tasks.filter(task => {
-    if (!task.dueDate || task.completed) return false;
-    const today = new Date().toDateString();
-    return new Date(task.dueDate).toDateString() === today;
-  });
+  const todayTasks = getTasksDueToday();
 
 
   const fetchDashboardData = useCallback(async () => {

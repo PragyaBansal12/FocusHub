@@ -204,13 +204,13 @@ export const TaskProvider = ({ children }) => {
 
 
     const getTasksDueToday = () => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toDateString();
         
         return tasks.filter(task => 
             !task.completed && 
             task.dueDate && 
-            new Date(task.dueDate).toISOString().split('T')[0] === today
-        ).length;
+            new Date(task.dueDate).toDateString() === today
+        );
     };
 
 
