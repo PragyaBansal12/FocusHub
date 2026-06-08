@@ -39,15 +39,16 @@ By consolidating scattered tools into a single, unified platform, FocusHub elimi
 ---
 
 ## 🌟 Key Features
-- 🔑 **Google Login & Signup**: Frictionless one-tap Google SSO alongside secure email authentication for seamless onboarding.
-- ⏱️ **Intelligent Pomodoro Dashboard**: Full-fledged dashboard featuring customizable Pomodoro timer settings designed specifically for optimized focus study sessions.
-- 📅 **Google Calendar Sync**: Seamless one-way synchronization pushing tasks and strict deadlines directly into the user's primary Google Calendar via OAuth2.
-- 📣 **Automated Email Reminders**: Nodemailer-driven alerts automatically notifying users of overdue and highly prioritized tasks.
-- 💬 **Real-Time Collaboration**: Integrated WebSockets enabling instant community discussions and personal chats for healthy, collaborative learning.
-- 💳 **Integrated Payment Gateway**: Seamless Razorpay online payment integration allowing users to upgrade accounts and subscribe to Pro tiers.
-- ⚡ **Zero-Latency Optimistic UI**: Tasks and resources update instantly (0ms latency) on the interface while safely resolving database transactions in the background.
-- ☁️ **Cloudinary Media Pipeline**: Direct file uploading via Multer for study materials, generating secure, expiring URLs for instant previews.
-- 📈 **Comprehensive Analytics Dashboard**: Fully interactive charts and data visualizations tracking daily focus time and completed tasks to monitor long-term productivity progress.
+
+- 🔑 **Secure Authentication & SSO**: Implemented secure email authentication and frictionless one-tap Google Single Sign-On (SSO) using OAuth2.
+- ✅ **Advanced Task Management (CRUD)**: Engineered a robust task management system enabling users to efficiently create, read, update, and delete (CRUD) tasks, boosting daily productivity.
+- ⏱️ **Intelligent Pomodoro Dashboard**: Developed a full-fledged focus dashboard featuring a customizable Pomodoro timer designed specifically for optimized, distraction-free study sessions.
+- 📅 **Google Calendar Synchronization**: Integrated seamless one-way synchronization to automatically push tasks and strict deadlines directly into the user's primary Google Calendar via the Google API.
+- 📣 **Automated Email Reminders**: Configured a reliable background scheduler using `node-cron` and `Nodemailer` to automatically dispatch email alerts notifying users of overdue and high-priority tasks.
+- 💬 **Real-Time Chat & Collaboration**: Leveraged WebSocket technology (`Socket.io`) to engineer a real-time community chat platform, enabling instant peer-to-peer discussions and collaborative learning.
+- ☁️ **Cloud Media Pipeline & Document Management**: Designed a scalable file management system utilizing Multer and Cloudinary. Users can seamlessly upload, preview, and download study materials (PDFs, Docs, Videos), featuring advanced tag-based filtering and search capabilities.
+- 📈 **Comprehensive Analytics Dashboard**: Built fully interactive charts and data visualizations to meticulously track daily focus time and completed tasks, empowering users to monitor long-term productivity trends.
+- 💳 **Integrated Payment Gateway**: Integrated the Razorpay SDK to facilitate seamless and secure online transactions, allowing users to upgrade accounts and subscribe to premium Pro tiers.
 
 ---
 
